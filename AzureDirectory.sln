@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDirectory", "AzureDirectory\AzureDirectory.csproj", "{6D8758A7-F910-4BA0-B382-D535CA1FF958}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{E18C9E98-AF7F-4D7C-8222-C55DD009C46B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6D8758A7-F910-4BA0-B382-D535CA1FF958}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D8758A7-F910-4BA0-B382-D535CA1FF958}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D8758A7-F910-4BA0-B382-D535CA1FF958}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D8758A7-F910-4BA0-B382-D535CA1FF958}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E18C9E98-AF7F-4D7C-8222-C55DD009C46B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E18C9E98-AF7F-4D7C-8222-C55DD009C46B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E18C9E98-AF7F-4D7C-8222-C55DD009C46B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E18C9E98-AF7F-4D7C-8222-C55DD009C46B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
