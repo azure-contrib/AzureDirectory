@@ -6,10 +6,10 @@ using System.Text;
 using System.IO;
 using Lucene.Net;
 using Lucene.Net.Store;
-using Microsoft.WindowsAzure.StorageClient;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Threading;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Lucene.Net.Store.Azure
 {
@@ -20,7 +20,7 @@ namespace Lucene.Net.Store.Azure
     {
         private AzureDirectory _azureDirectory;
         private CloudBlobContainer _blobContainer;
-        private CloudBlob _blob;
+        private ICloudBlob _blob;
         private string _name;
 
         private IndexInput _indexInput;
@@ -28,7 +28,7 @@ namespace Lucene.Net.Store.Azure
 
         public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
 
-        public AzureIndexInput(AzureDirectory azuredirectory, CloudBlob blob)
+        public AzureIndexInput(AzureDirectory azuredirectory, ICloudBlob blob)
         {
             _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
 
@@ -57,7 +57,7 @@ namespace Lucene.Net.Store.Azure
                     long.TryParse(blob.Metadata["CachedLength"], out blobLength);
 
                     long longLastModified = 0;
-                    DateTime blobLastModifiedUTC = blob.Properties.LastModifiedUtc;
+                    DateTime blobLastModifiedUTC = blob.Properties.LastModified.Value.UtcDateTime;
                     if (long.TryParse(blob.Metadata["CachedLastModified"], out longLastModified))
                         blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
                     
@@ -192,9 +192,12 @@ namespace Lucene.Net.Store.Azure
             _indexInput.ReadBytes(b, offset, len);
         }
 
-        public override long GetFilePointer()
+        public override long FilePointer
         {
-            return _indexInput.GetFilePointer();
+            get
+            {
+                return _indexInput.FilePointer;
+            }
         }
 
         public override void Seek(long pos)
@@ -202,7 +205,7 @@ namespace Lucene.Net.Store.Azure
             _indexInput.Seek(pos);
         }
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
             _fileMutex.WaitOne();
             try
@@ -210,7 +213,7 @@ namespace Lucene.Net.Store.Azure
 #if FULLDEBUG
                 Debug.WriteLine(String.Format("CLOSED READSTREAM local {0}", _name));
 #endif
-                _indexInput.Close();
+                _indexInput.Dispose();
                 _indexInput = null;
                 _azureDirectory = null;
                 _blobContainer = null;

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
 using Lucene.Net;
 using Lucene.Net.Store;
 using Lucene.Net.Index;
@@ -17,7 +16,7 @@ using Lucene.Net.QueryParsers;
 using System.Diagnostics;
 using System.ComponentModel;
 using Lucene.Net.Store.Azure;
-using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.Storage;
 
 namespace TestApp
 {
@@ -27,23 +26,9 @@ namespace TestApp
 
         static void Main(string[] args)
         {
-            // get settings from azure settings or app.config
-            CloudStorageAccount.SetConfigurationSettingPublisher((configName, configSetter) =>
-            {
-                try
-                {
-                    configSetter(RoleEnvironment.GetConfigurationSettingValue(configName));
-                }
-                catch (Exception)
-                {
-                    // for a console app, reading from App.config
-                    configSetter(System.Configuration.ConfigurationManager.AppSettings[configName]);
-                }                
-            });
-
             
             // default AzureDirectory stores cache in local temp folder
-            AzureDirectory azureDirectory = new AzureDirectory(CloudStorageAccount.FromConfigurationSetting("blobStorage"), "TestCatalog6");
+            AzureDirectory azureDirectory = new AzureDirectory(CloudStorageAccount.DevelopmentStorageAccount, "TestCatalog6");
             bool findexExists = IndexReader.IndexExists(azureDirectory);
 
             IndexWriter indexWriter = null;
@@ -51,7 +36,7 @@ namespace TestApp
             {
                 try
                 {
-                    indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(), !IndexReader.IndexExists(azureDirectory));
+                    indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_CURRENT), !IndexReader.IndexExists(azureDirectory), new Lucene.Net.Index.IndexWriter.MaxFieldLength(IndexWriter.DEFAULT_MAX_FIELD_LENGTH));
                 }
                 catch (LockObtainFailedException)
                 {
@@ -62,22 +47,22 @@ namespace TestApp
             };
             Console.WriteLine("IndexWriter lock obtained, this process has exclusive write access to index");
             indexWriter.SetRAMBufferSizeMB(10.0);
-            indexWriter.SetUseCompoundFile(false);
-            indexWriter.SetMaxMergeDocs(10000);
-            indexWriter.SetMergeFactor(100);
+            //indexWriter.SetUseCompoundFile(false);
+            //indexWriter.SetMaxMergeDocs(10000);
+            //indexWriter.SetMergeFactor(100);
             
             for (int iDoc = 0; iDoc < 10000; iDoc++)
             {
                 if (iDoc % 10 == 0)
                     Console.WriteLine(iDoc);
                 Document doc = new Document();
-                doc.Add(new Field("id", DateTime.Now.ToFileTimeUtc().ToString(), Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
-                doc.Add(new Field("Title", GeneratePhrase(10), Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
-                doc.Add(new Field("Body", GeneratePhrase(40), Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
+                doc.Add(new Field("id", DateTime.Now.ToFileTimeUtc().ToString(), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
+                doc.Add(new Field("Title", GeneratePhrase(10), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
+                doc.Add(new Field("Body", GeneratePhrase(40), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
                 indexWriter.AddDocument(doc);
             }
-            Console.WriteLine("Total docs is {0}", indexWriter.DocCount());
-            indexWriter.Close();
+            Console.WriteLine("Total docs is {0}", indexWriter.NumDocs());
+            indexWriter.Dispose();
 
             IndexSearcher searcher;
             using (new AutoStopWatch("Creating searcher"))
@@ -87,6 +72,7 @@ namespace TestApp
             SearchForPhrase(searcher, "dog");
             SearchForPhrase(searcher, _random.Next(32768).ToString());
             SearchForPhrase(searcher, _random.Next(32768).ToString());
+            Console.Read();
         }
 
 
@@ -94,17 +80,17 @@ namespace TestApp
         {
             using (new AutoStopWatch(string.Format("Search for {0}", phrase)))
             {
-                Lucene.Net.QueryParsers.QueryParser parser = new Lucene.Net.QueryParsers.QueryParser("Body", new StandardAnalyzer());
+                Lucene.Net.QueryParsers.QueryParser parser = new Lucene.Net.QueryParsers.QueryParser(Lucene.Net.Util.Version.LUCENE_CURRENT, "Body", new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_CURRENT));
                 Lucene.Net.Search.Query query = parser.Parse(phrase);
 
-                Hits hits = searcher.Search(query);
-                Console.WriteLine("Found {0} results for {1}", hits.Length(), phrase);
-                int max = hits.Length();
+                var hits = searcher.Search(query, 100);
+                Console.WriteLine("Found {0} results for {1}", hits.TotalHits, phrase);
+                int max = hits.TotalHits;
                 if (max > 100) 
                     max = 100;
                 for (int i = 0; i < max; i++)
                 {
-                    Console.WriteLine(hits.Doc(i).GetField("Title").StringValue());
+                    Console.WriteLine(hits.ScoreDocs[i].Doc);
                 }
             }
         }

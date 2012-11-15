@@ -42,14 +42,14 @@ namespace Lucene.Net.Store.Azure
 
         public override long Length
         {
-            get { return Output.Length(); }
+            get { return Output.Length; }
         }
 
         public override long Position
         {
             get
             {
-                return Output.GetFilePointer();
+                return Output.FilePointer;
             }
             set
             {
@@ -70,12 +70,12 @@ namespace Lucene.Net.Store.Azure
                     Output.Seek(offset);
                     break;
                 case SeekOrigin.Current:
-                    Output.Seek(Output.GetFilePointer() + offset);
+                    Output.Seek(Output.FilePointer + offset);
                     break;
                 case SeekOrigin.End:
                     throw new System.NotImplementedException();
             }
-            return Output.GetFilePointer();
+            return Output.FilePointer;
         }
 
         public override void SetLength(long value)

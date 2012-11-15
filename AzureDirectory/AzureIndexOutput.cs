@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using Lucene.Net;
 using Lucene.Net.Store;
-using Microsoft.WindowsAzure.StorageClient;
 using System.IO;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Threading;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 
 namespace Lucene.Net.Store.Azure
@@ -24,10 +24,10 @@ namespace Lucene.Net.Store.Azure
         private string _name;
         private IndexOutput _indexOutput;
         private Mutex _fileMutex;
-        private CloudBlob _blob;
+        private ICloudBlob _blob;
         public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
 
-        public AzureIndexOutput(AzureDirectory azureDirectory, CloudBlob blob)
+        public AzureIndexOutput(AzureDirectory azureDirectory, ICloudBlob blob)
         {
             _fileMutex = BlobMutexManager.GrabMutex(_name); 
             _fileMutex.WaitOne();
@@ -52,7 +52,7 @@ namespace Lucene.Net.Store.Azure
             _indexOutput.Flush();
         }
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
             _fileMutex.WaitOne();
             try
@@ -62,8 +62,8 @@ namespace Lucene.Net.Store.Azure
                 // make sure it's all written out
                 _indexOutput.Flush();
 
-                long originalLength = _indexOutput.Length();
-                _indexOutput.Close();
+                long originalLength = _indexOutput.Length;
+                _indexOutput.Dispose();
 
                 Stream blobStream;
 #if COMPRESSBLOBS
@@ -143,9 +143,12 @@ namespace Lucene.Net.Store.Azure
             }
         }
 
-        public override long Length()
+        public override long Length
         {
-            return _indexOutput.Length();
+            get
+            {
+                return _indexOutput.Length;
+            }
         }
 
         public override void WriteByte(byte b)
@@ -163,9 +166,12 @@ namespace Lucene.Net.Store.Azure
             _indexOutput.WriteBytes(b, offset, length);
         }
 
-        public override long GetFilePointer()
+        public override long FilePointer
         {
-            return _indexOutput.GetFilePointer();
+            get
+            {
+                return _indexOutput.FilePointer;
+            }
         }
 
         public override void Seek(long pos)
