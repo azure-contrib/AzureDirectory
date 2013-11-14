@@ -151,7 +151,7 @@ namespace Lucene.Net.Store.Azure
 
         private bool _handleWebException(ICloudBlob blob, StorageException err)
         {
-            if (err.RequestInformation.HttpStatusCode == 404)
+            if (err.RequestInformation.HttpStatusCode == 404 || err.RequestInformation.HttpStatusCode == 409)
             {
                 _azureDirectory.CreateContainer();
                 using (var stream = new MemoryStream())
