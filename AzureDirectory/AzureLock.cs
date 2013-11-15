@@ -44,7 +44,7 @@ namespace Lucene.Net.Store.Azure
                         Debug.Print("IsLocked() : TRUE");
                         return true;
                     }
-                    blob.ReleaseLease(new AccessCondition() { LeaseId = _leaseid});
+                    blob.ReleaseLease(new AccessCondition() { LeaseId = tempLease });
                 }
                 Debug.Print("IsLocked() : {0}", _leaseid);
                 return String.IsNullOrEmpty(_leaseid);
@@ -54,11 +54,6 @@ namespace Lucene.Net.Store.Azure
                 if (_handleWebException(blob, webErr))
                     return IsLocked();
             }
-            /*catch (StorageClientException err)
-            {
-                if (_handleStorageClientException(blob, err))
-                    return IsLocked();
-            }*/
             _leaseid = null;
             return false;
         }
@@ -93,11 +88,6 @@ namespace Lucene.Net.Store.Azure
                 if (_handleWebException(blob, webErr))
                     return Obtain();
             }
-            /*catch (StorageClientException err)
-            {
-                if (_handleStorageClientException(blob, err))
-                    return Obtain();
-            }*/
             return false;
         }
 
@@ -138,7 +128,7 @@ namespace Lucene.Net.Store.Azure
             {
                 blob.BreakLease();
             }
-            catch (Exception err)
+            catch (Exception)
             {
             }
             _leaseid = null;
@@ -164,26 +154,6 @@ namespace Lucene.Net.Store.Azure
             }
             return false;
         }
-
-        /*
-        private bool _handleStorageClientException(ICloudBlob blob, StorageClientException err)
-        {
-            switch (err.ErrorCode)
-            {
-                case StorageErrorCode.ResourceNotFound:
-                    blob.UploadText(_lockFile);
-                    return true;
-
-                case StorageErrorCode.ContainerNotFound:
-                    // container is missing, we should create it.
-                    _azureDirectory.BlobContainer.Delete();
-                    _azureDirectory.CreateContainer();
-                    return true;
-
-                default:
-                    return false;
-            }
-        }*/
 
     }
 

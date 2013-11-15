@@ -77,7 +77,7 @@ namespace Lucene.Net.Store.Azure
 
                     try
                     {
-                        IndexInput indexInput = CacheDirectory.OpenInput(fileName);
+                        using (var indexInput = CacheDirectory.OpenInput(fileName))
                         using (DeflateStream compressor = new DeflateStream(compressedStream, CompressionMode.Compress, true))
                         {
                             // compress to compressedOutputStream
@@ -85,7 +85,6 @@ namespace Lucene.Net.Store.Azure
                             indexInput.ReadBytes(bytes, 0, (int)bytes.Length);
                             compressor.Write(bytes, 0, (int)bytes.Length);
                         }
-                        indexInput.Close();
 
                         // seek back to beginning of comrpessed stream
                         compressedStream.Seek(0, SeekOrigin.Begin);
