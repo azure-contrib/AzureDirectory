@@ -40,7 +40,7 @@ To use you need to create a blob storage account on http://azure.com .
 
 Create an App.Config or Web.Config and configure your accountinfo:
 
-```
+```xml
 <?xml version="1.0" encoding="utf-8" ?>
 <configuration>
 	<appSettings>
@@ -54,13 +54,15 @@ Create an App.Config or Web.Config and configure your accountinfo:
  
 To add documents to a catalog is as simple as
 
-```
-AzureDirectory azureDirectory = new AzureDirectory("TestCatalog");
-IndexWriter indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(), true);
-Document doc = new Document();
+```cs
+var azureDirectory = new AzureDirectory("TestCatalog");
+var indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(), true);
+var doc = new Document();
+
 doc.Add(new Field("id", DateTime.Now.ToFileTimeUtc().ToString(), Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
-doc.Add(new Field("Title", “this is my title”, Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
-doc.Add(new Field("Body", “This is my body”, Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
+doc.Add(new Field("Title", "this is my title", Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
+doc.Add(new Field("Body", "This is my body", Field.Store.YES, Field.Index.TOKENIZED, Field.TermVector.NO));
+
 indexWriter.AddDocument(doc);
 indexWriter.Close();
 ```
@@ -68,15 +70,15 @@ indexWriter.Close();
 
 And searching is as easy as:
 
-```
-IndexSearcher searcher = new IndexSearcher(azureDirectory);               
-Lucene.Net.QueryParsers.QueryParser parser = QueryParser("Title", new StandardAnalyzer());
-Lucene.Net.Search.Query query = parser.Parse("Title:(Dog AND Cat)");
+```cs
+var searcher = new IndexSearcher(azureDirectory);               
+var parser = QueryParser("Title", new StandardAnalyzer());
+var query = parser.Parse("Title:(Dog AND Cat)");
 
-Hits hits = searcher.Search(query);
+var hits = searcher.Search(query);
 for (int i = 0; i < hits.Length(); i++)
 {
-    Document doc = hits.Doc(i);
+    var doc = hits.Doc(i);
     Console.WriteLine(doc.GetField("Title").StringValue());
 }
 ```            
@@ -90,14 +92,14 @@ By default AzureDirectory stores this local cache in a temporary folder. You can
 
 This example stores the cache in a ram directory:
 
-```
-AzureDirectory azureDirectory = new AzureDirectory("MyIndex", new RAMDirectory());
+```cs
+var azureDirectory = new AzureDirectory("MyIndex", new RAMDirectory());
 ```
  
 And this example stores in the file system in C:\myindex
 
-```      
-AzureDirectory azureDirectory = new AzureDirectory("MyIndex", new FSDirectory(@"c:\myindex"));
+```cs
+var azureDirectory = new AzureDirectory("MyIndex", new FSDirectory(@"c:\myindex"));
 ```
 
 ## Notes on settings
