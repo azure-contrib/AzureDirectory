@@ -1,21 +1,10 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
+﻿using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using IndexFileNameFilter = Lucene.Net.Index.IndexFileNameFilter;
-using Lucene.Net;
-using Lucene.Net.Store;
-using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters;
-using System.Runtime.Serialization.Formatters.Binary;
-using Microsoft.WindowsAzure;
-using System.Configuration;
-using System.Xml.Serialization;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage;
+using System.IO;
+using System.Linq;
 
 namespace Lucene.Net.Store.Azure
 {
@@ -26,7 +15,6 @@ namespace Lucene.Net.Store.Azure
         private CloudBlobContainer _blobContainer;
         private Directory _cacheDirectory;
 
-        #region CTOR
         public AzureDirectory(CloudStorageAccount storageAccount) :
             this(storageAccount, null, null)
         {
@@ -102,9 +90,7 @@ namespace Lucene.Net.Store.Azure
                 _cacheDirectory = value;
             }
         }
-        #endregion
 
-        #region internal methods
         private void _initCacheDirectory(Directory cacheDirectory)
         {
 #if COMPRESSBLOBS
@@ -117,13 +103,13 @@ namespace Lucene.Net.Store.Azure
             }
             else
             {
-                string cachePath = System.IO.Path.Combine(Environment.ExpandEnvironmentVariables("%temp%"), "AzureDirectory");
-                System.IO.DirectoryInfo azureDir = new System.IO.DirectoryInfo(cachePath);
+                var cachePath = Path.Combine(Environment.ExpandEnvironmentVariables("%temp%"), "AzureDirectory");
+                var azureDir = new DirectoryInfo(cachePath);
                 if (!azureDir.Exists)
                     azureDir.Create();
 
-                string catalogPath = System.IO.Path.Combine(cachePath, _catalog);
-                System.IO.DirectoryInfo catalogDir = new System.IO.DirectoryInfo(catalogPath);
+                var catalogPath = System.IO.Path.Combine(cachePath, _catalog);
+                var catalogDir = new DirectoryInfo(catalogPath);
                 if (!catalogDir.Exists)
                     catalogDir.Create();
 
@@ -136,15 +122,11 @@ namespace Lucene.Net.Store.Azure
         public void CreateContainer()
         {
             _blobContainer = _blobClient.GetContainerReference(_catalog);
-
-            // create it if it does not exist
             _blobContainer.CreateIfNotExists();
         }
-        #endregion
-
-        #region DIRECTORY METHODS
+        
         /// <summary>Returns an array of strings, one for each file in the directory. </summary>
-        public override System.String[] ListAll()
+        public override String[] ListAll()
         {
             var results = from blob in _blobContainer.ListBlobs()
                           select blob.Uri.AbsolutePath.Substring(blob.Uri.AbsolutePath.LastIndexOf('/') + 1);
@@ -152,7 +134,7 @@ namespace Lucene.Net.Store.Azure
         }
 
         /// <summary>Returns true if a file with the given name exists. </summary>
-        public override bool FileExists(System.String name)
+        public override bool FileExists(String name)
         {
             // this always comes from the server
             try
@@ -168,7 +150,7 @@ namespace Lucene.Net.Store.Azure
         }
 
         /// <summary>Returns the time the named file was last modified. </summary>
-        public override long FileModified(System.String name)
+        public override long FileModified(String name)
         {
             // this always has to come from the server
             try
@@ -208,35 +190,9 @@ namespace Lucene.Net.Store.Azure
                 _cacheDirectory.DeleteFile(name);
         }
 
-        /*
-        /// <summary>Renames an existing file in the directory.
-        /// If a file already exists with the new name, then it is replaced.
-        /// This replacement should be atomic. 
-        /// </summary>
-        public void RenameFile(System.String from, System.String to)
-        {
-            try
-            {
-                var blobFrom = _blobContainer.GetBlockBlobReference(from);
-                var blobTo = _blobContainer.GetBlockBlobReference(to);
-                blobTo.CopyFromBlob(blobFrom);
-                blobFrom.DeleteIfExists();
-
-                // we delete and force a redownload, since we can't do this in an atomic way
-                if (_cacheDirectory.FileExists(from))
-                    _cacheDirectory.RenameFile(from, to);
-
-                // drop old cached data as it's wrong now
-                if (_cacheDirectory.FileExists(from + ".blob"))
-                    _cacheDirectory.DeleteFile(from + ".blob");
-            }
-            catch
-            {
-            }
-        }*/
-
+       
         /// <summary>Returns the length of a file in the directory. </summary>
-        public override long FileLength(System.String name)
+        public override long FileLength(String name)
         {
             var blob = _blobContainer.GetBlockBlobReference(name);
             blob.FetchAttributes();
@@ -265,12 +221,11 @@ namespace Lucene.Net.Store.Azure
             {
                 var blob = _blobContainer.GetBlockBlobReference(name);
                 blob.FetchAttributes();
-                AzureIndexInput input = new AzureIndexInput(this, blob);
-                return input;
+                return new AzureIndexInput(this, blob);
             }
             catch (Exception err)
             {
-                throw new System.IO.FileNotFoundException(name, err);
+                throw new FileNotFoundException(name, err);
             }
         }
 
@@ -307,16 +262,14 @@ namespace Lucene.Net.Store.Azure
             _blobContainer = null;
             _blobClient = null;
         }
-        #endregion
 
-        #region Azure specific methods
 #if COMPRESSBLOBS
         public virtual bool ShouldCompressFile(string path)
         {
             if (!CompressBlobs)
                 return false;
 
-            string ext = System.IO.Path.GetExtension(path);
+            var ext = System.IO.Path.GetExtension(path);
             switch (ext)
             {
                 case ".cfs":
@@ -346,7 +299,6 @@ namespace Lucene.Net.Store.Azure
             return new StreamOutput(CacheDirectory.CreateOutput(name));
         }
 
-        #endregion
     }
 
 }
