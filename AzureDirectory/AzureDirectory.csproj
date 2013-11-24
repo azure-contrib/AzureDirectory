@@ -113,11 +113,6 @@
     <None Include="Sample App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Readme.html">
-      <Link>Readme.html</Link>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
       <Visible>False</Visible>
       <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
