@@ -1,15 +1,9 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
+﻿using Microsoft.WindowsAzure.Storage.Blob;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using Lucene.Net;
-using Lucene.Net.Store;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Threading;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Lucene.Net.Store.Azure
 {
@@ -43,9 +37,9 @@ namespace Lucene.Net.Store.Azure
                 _blobContainer = azuredirectory.BlobContainer;
                 _blob = blob;
 
-                string fileName = _name;
+                var fileName = _name;
 
-                bool fFileNeeded = false;
+                var fFileNeeded = false;
                 if (!CacheDirectory.FileExists(fileName))
                 {
                     fFileNeeded = true;
@@ -67,10 +61,10 @@ namespace Lucene.Net.Store.Azure
                     {
                         // there seems to be an error of 1 tick which happens every once in a while 
                         // for now we will say that if they are within 1 tick of each other and same length 
-                        DateTime cachedLastModifiedUTC = new DateTime(CacheDirectory.FileModified(fileName), DateTimeKind.Local).ToUniversalTime();
+                        var cachedLastModifiedUTC = new DateTime(CacheDirectory.FileModified(fileName), DateTimeKind.Local).ToUniversalTime();
                         if (cachedLastModifiedUTC != blobLastModifiedUTC)
                         {
-                            TimeSpan timeSpan = blobLastModifiedUTC.Subtract(cachedLastModifiedUTC);
+                            var timeSpan = blobLastModifiedUTC.Subtract(cachedLastModifiedUTC);
                             if (timeSpan.TotalSeconds > 1)
                                 fFileNeeded = true;
                             else
@@ -88,7 +82,6 @@ namespace Lucene.Net.Store.Azure
                 // or if it exists and it is older then the lastmodified time in the blobproperties (which always comes from the blob storage)
                 if (fFileNeeded)
                 {
-#if COMPRESSBLOBS
                     if (_azureDirectory.ShouldCompressFile(_name))
                     {
                         // then we will get it fresh into local deflatedName 
@@ -123,7 +116,6 @@ namespace Lucene.Net.Store.Azure
 
                     }
                     else
-#endif
                     {
                         StreamOutput fileStream = _azureDirectory.CreateCachedOutputAsStream(fileName);
 

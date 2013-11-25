@@ -1,16 +1,9 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Lucene.Net;
-using Lucene.Net.Store;
-using System.Diagnostics;
-using System.Net;
-using System.Threading;
+﻿using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using System;
+using System.Diagnostics;
 using System.IO;
-using Microsoft.WindowsAzure.Storage;
+using System.Threading;
 
 namespace Lucene.Net.Store.Azure
 {

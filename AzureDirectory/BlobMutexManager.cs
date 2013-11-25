@@ -1,5 +1,4 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
-using System;
+﻿using System;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading;

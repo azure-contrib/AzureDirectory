@@ -1,15 +1,9 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
+﻿using Microsoft.WindowsAzure.Storage.Blob;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Lucene.Net;
-using Lucene.Net.Store;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Threading;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 
 namespace Lucene.Net.Store.Azure
@@ -66,7 +60,6 @@ namespace Lucene.Net.Store.Azure
                 _indexOutput.Dispose();
 
                 Stream blobStream;
-#if COMPRESSBLOBS
 
                 // optionally put a compressor around the blob stream
                 if (_azureDirectory.ShouldCompressFile(_name))
@@ -105,7 +98,6 @@ namespace Lucene.Net.Store.Azure
                     blobStream = compressedStream;
                 }
                 else
-#endif
                 {
                     blobStream = new StreamInput(CacheDirectory.OpenInput(fileName));
                 }
