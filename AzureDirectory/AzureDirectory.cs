@@ -15,23 +15,7 @@ namespace Lucene.Net.Store.Azure
         private CloudBlobContainer _blobContainer;
         private Directory _cacheDirectory;
 
-        public AzureDirectory(CloudStorageAccount storageAccount) :
-            this(storageAccount, null, null)
-        {
-        }
-
-        /// <summary>
-        /// Create AzureDirectory
-        /// </summary>
-        /// <param name="storageAccount">staorage account to use</param>
-        /// <param name="catalog">name of catalog (folder in blob storage)</param>
-        /// <remarks>Default local cache is to use file system in user/appdata/AzureDirectory/Catalog</remarks>
-        public AzureDirectory(
-            CloudStorageAccount storageAccount,
-            string catalog)
-            : this(storageAccount, catalog, null)
-        {
-        }
+     
 
         /// <summary>
         /// Create an AzureDirectory
@@ -41,8 +25,9 @@ namespace Lucene.Net.Store.Azure
         /// <param name="cacheDirectory">local Directory object to use for local cache</param>
         public AzureDirectory(
             CloudStorageAccount storageAccount,
-            string catalog,
-            Directory cacheDirectory)
+            string catalog = null,
+            Directory cacheDirectory = null,
+            bool compressBlobs = false)
         {
             if (storageAccount == null)
                 throw new ArgumentNullException("storageAccount");
@@ -54,6 +39,7 @@ namespace Lucene.Net.Store.Azure
 
             _blobClient = storageAccount.CreateCloudBlobClient();
             _initCacheDirectory(cacheDirectory);
+            this.CompressBlobs = compressBlobs;
         }
 
         public CloudBlobContainer BlobContainer
@@ -64,13 +50,12 @@ namespace Lucene.Net.Store.Azure
             }
         }
 
-#if COMPRESSBLOBS
         public bool CompressBlobs
         {
             get;
             set;
         }
-#endif
+      
         public void ClearCache()
         {
             foreach (string file in _cacheDirectory.ListAll())
@@ -93,9 +78,6 @@ namespace Lucene.Net.Store.Azure
 
         private void _initCacheDirectory(Directory cacheDirectory)
         {
-#if COMPRESSBLOBS
-            CompressBlobs = true;
-#endif
             if (cacheDirectory != null)
             {
                 // save it off
@@ -263,7 +245,6 @@ namespace Lucene.Net.Store.Azure
             _blobClient = null;
         }
 
-#if COMPRESSBLOBS
         public virtual bool ShouldCompressFile(string path)
         {
             if (!CompressBlobs)
@@ -288,7 +269,6 @@ namespace Lucene.Net.Store.Azure
                     return false;
             };
         }
-#endif
         public StreamInput OpenCachedInputAsStream(string name)
         {
             return new StreamInput(CacheDirectory.OpenInput(name));
