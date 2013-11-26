@@ -1,22 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Microsoft.WindowsAzure;
-using Lucene.Net;
-using Lucene.Net.Store;
-using Lucene.Net.Index;
+﻿using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
-using Lucene.Net.Util;
-using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.QueryParsers;
-using System.Diagnostics;
-using System.ComponentModel;
+using Lucene.Net.Store;
 using Lucene.Net.Store.Azure;
 using Microsoft.WindowsAzure.Storage;
+using System;
+using System.Diagnostics;
+using System.Text;
 
 namespace TestApp
 {
@@ -28,8 +19,8 @@ namespace TestApp
         {
             
             // default AzureDirectory stores cache in local temp folder
-            AzureDirectory azureDirectory = new AzureDirectory(CloudStorageAccount.DevelopmentStorageAccount, "TestCatalog6");
-            bool findexExists = IndexReader.IndexExists(azureDirectory);
+            var azureDirectory = new AzureDirectory(CloudStorageAccount.DevelopmentStorageAccount, "TestCatalog6");
+            var findexExists = IndexReader.IndexExists(azureDirectory);
 
             IndexWriter indexWriter = null;
             while (indexWriter == null)
@@ -55,7 +46,7 @@ namespace TestApp
             {
                 if (iDoc % 10 == 0)
                     Console.WriteLine(iDoc);
-                Document doc = new Document();
+                var doc = new Document();
                 doc.Add(new Field("id", DateTime.Now.ToFileTimeUtc().ToString(), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
                 doc.Add(new Field("Title", GeneratePhrase(10), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
                 doc.Add(new Field("Body", GeneratePhrase(40), Field.Store.YES, Field.Index.ANALYZED, Field.TermVector.NO));
@@ -85,9 +76,7 @@ namespace TestApp
 
                 var hits = searcher.Search(query, 100);
                 Console.WriteLine("Found {0} results for {1}", hits.TotalHits, phrase);
-                int max = hits.TotalHits;
-                if (max > 100) 
-                    max = 100;
+                int max = Math.Min(hits.TotalHits,100);
                 for (int i = 0; i < max; i++)
                 {
                     Console.WriteLine(hits.ScoreDocs[i].Doc);
@@ -126,8 +115,6 @@ namespace TestApp
             _stopwatch = Stopwatch.StartNew();
         }
 
-
-        #region IDisposable Members
         public void Dispose()
         {
 
@@ -136,7 +123,6 @@ namespace TestApp
 
             Debug.WriteLine(String.Format("{0} Finished {1} ms", _message, ms));
         }
-        #endregion
     }
 
 

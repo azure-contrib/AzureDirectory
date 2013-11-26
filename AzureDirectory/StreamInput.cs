@@ -1,10 +1,5 @@
-﻿//    License: Microsoft Public License (Ms-PL) 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.IO;
-using Lucene.Net.Store;
 
 namespace Lucene.Net.Store.Azure
 {
@@ -34,10 +29,10 @@ namespace Lucene.Net.Store.Azure
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            long pos = Input.FilePointer;
+            var pos = Input.FilePointer;
             try
             {
-                long len = Input.Length();
+                var len = Input.Length();
                 if (count > (len - pos))
                     count = (int)(len - pos);
                 Input.ReadBytes(buffer, offset, count);
@@ -64,17 +59,17 @@ namespace Lucene.Net.Store.Azure
 
         public override void SetLength(long value)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override void Close()
         {
-            Input.Close();
+            Input.Dispose();
             base.Close();
         }
     }
