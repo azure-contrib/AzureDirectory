@@ -64,38 +64,7 @@ namespace Lucene.Net.Store.Azure
                 // optionally put a compressor around the blob stream
                 if (_azureDirectory.ShouldCompressFile(_name))
                 {
-                    // unfortunately, deflate stream doesn't allow seek, and we need a seekable stream
-                    // to pass to the blob storage stuff, so we compress into a memory stream
-                    MemoryStream compressedStream = new MemoryStream();
-
-                    try
-                    {
-                        using (var indexInput = CacheDirectory.OpenInput(fileName))
-                        using (DeflateStream compressor = new DeflateStream(compressedStream, CompressionMode.Compress, true))
-                        {
-                            // compress to compressedOutputStream
-                            byte[] bytes = new byte[indexInput.Length()];
-                            indexInput.ReadBytes(bytes, 0, (int)bytes.Length);
-                            compressor.Write(bytes, 0, (int)bytes.Length);
-                        }
-
-                        // seek back to beginning of comrpessed stream
-                        compressedStream.Seek(0, SeekOrigin.Begin);
-
-                        Debug.WriteLine(string.Format("COMPRESSED {0} -> {1} {2}% to {3}",
-                           originalLength,
-                           compressedStream.Length,
-                           ((float)compressedStream.Length / (float)originalLength) * 100,
-                           _name));
-                    }
-                    catch
-                    {
-                        // release the compressed stream resources if an error occurs
-                        compressedStream.Dispose();
-                        throw;
-                    }
-
-                    blobStream = compressedStream;
+                    blobStream = CompressStream(fileName, originalLength);
                 }
                 else
                 {
@@ -132,6 +101,41 @@ namespace Lucene.Net.Store.Azure
             {
                 _fileMutex.ReleaseMutex();
             }
+        }
+
+        private MemoryStream CompressStream(string fileName, long originalLength)
+        {
+            // unfortunately, deflate stream doesn't allow seek, and we need a seekable stream
+            // to pass to the blob storage stuff, so we compress into a memory stream
+            MemoryStream compressedStream = new MemoryStream();
+
+            try
+            {
+                using (var indexInput = CacheDirectory.OpenInput(fileName))
+                using (var compressor = new DeflateStream(compressedStream, CompressionMode.Compress, true))
+                {
+                    // compress to compressedOutputStream
+                    byte[] bytes = new byte[indexInput.Length()];
+                    indexInput.ReadBytes(bytes, 0, (int)bytes.Length);
+                    compressor.Write(bytes, 0, (int)bytes.Length);
+                }
+
+                // seek back to beginning of comrpessed stream
+                compressedStream.Seek(0, SeekOrigin.Begin);
+
+                Debug.WriteLine(string.Format("COMPRESSED {0} -> {1} {2}% to {3}",
+                   originalLength,
+                   compressedStream.Length,
+                   ((float)compressedStream.Length / (float)originalLength) * 100,
+                   _name));
+            }
+            catch
+            {
+                // release the compressed stream resources if an error occurs
+                compressedStream.Dispose();
+                throw;
+            }
+            return compressedStream;
         }
 
         public override long Length
