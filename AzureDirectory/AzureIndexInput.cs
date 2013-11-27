@@ -84,48 +84,18 @@ namespace Lucene.Net.Store.Azure
                 {
                     if (_azureDirectory.ShouldCompressFile(_name))
                     {
-                        // then we will get it fresh into local deflatedName 
-                        // StreamOutput deflatedStream = new StreamOutput(CacheDirectory.CreateOutput(deflatedName));
-                        MemoryStream deflatedStream = new MemoryStream();
-
-                        // get the deflated blob
-                        _blob.DownloadToStream(deflatedStream);
-
-                        Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, deflatedStream.Length));
-
-                        // seek back to begininng
-                        deflatedStream.Seek(0, SeekOrigin.Begin);
-
-                        // open output file for uncompressed contents
-                        StreamOutput fileStream = _azureDirectory.CreateCachedOutputAsStream(fileName);
-
-                        // create decompressor
-                        DeflateStream decompressor = new DeflateStream(deflatedStream, CompressionMode.Decompress);
-
-                        byte[] bytes = new byte[65535];
-                        int nRead = 0;
-                        do
-                        {
-                            nRead = decompressor.Read(bytes, 0, 65535);
-                            if (nRead > 0)
-                                fileStream.Write(bytes, 0, nRead);
-                        } while (nRead == 65535);
-                        decompressor.Close(); // this should close the deflatedFileStream too
-
-                        fileStream.Close();
-
+                        InflateStream(fileName);
                     }
                     else
                     {
-                        StreamOutput fileStream = _azureDirectory.CreateCachedOutputAsStream(fileName);
+                        using (var fileStream = _azureDirectory.CreateCachedOutputAsStream(fileName))
+                        {
+                            // get the blob
+                            _blob.DownloadToStream(fileStream);
 
-                        // get the blob
-                        _blob.DownloadToStream(fileStream);
-
-                        fileStream.Flush();
-                        Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, fileStream.Length));
-
-                        fileStream.Close();
+                            fileStream.Flush();
+                            Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, fileStream.Length));
+                        }
                     }
 
                     // and open it as an input 
@@ -144,6 +114,36 @@ namespace Lucene.Net.Store.Azure
             finally
             {
                 _fileMutex.ReleaseMutex();
+            }
+        }
+
+        private void InflateStream(string fileName)
+        {
+            // then we will get it fresh into local deflatedName 
+            // StreamOutput deflatedStream = new StreamOutput(CacheDirectory.CreateOutput(deflatedName));
+            using (var deflatedStream = new MemoryStream())
+            {
+                // get the deflated blob
+                _blob.DownloadToStream(deflatedStream);
+
+                Debug.WriteLine(string.Format("GET {0} RETREIVED {1} bytes", _name, deflatedStream.Length));
+
+                // seek back to begininng
+                deflatedStream.Seek(0, SeekOrigin.Begin);
+
+                // open output file for uncompressed contents
+                using (var fileStream = _azureDirectory.CreateCachedOutputAsStream(fileName))
+                using (var decompressor = new DeflateStream(deflatedStream, CompressionMode.Decompress))
+                {
+                    var bytes = new byte[65535];
+                    var nRead = 0;
+                    do
+                    {
+                        nRead = decompressor.Read(bytes, 0, 65535);
+                        if (nRead > 0)
+                            fileStream.Write(bytes, 0, nRead);
+                    } while (nRead == 65535);
+                }
             }
         }
 
