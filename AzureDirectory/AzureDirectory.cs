@@ -85,12 +85,12 @@ namespace Lucene.Net.Store.Azure
             }
             else
             {
-                var cachePath = Path.Combine(Environment.ExpandEnvironmentVariables("%temp%"), "AzureDirectory");
+                var cachePath = Path.Combine("c:\\", "AzureDirectory");
                 var azureDir = new DirectoryInfo(cachePath);
                 if (!azureDir.Exists)
                     azureDir.Create();
 
-                var catalogPath = System.IO.Path.Combine(cachePath, _catalog);
+                var catalogPath = Path.Combine(cachePath, _catalog);
                 var catalogDir = new DirectoryInfo(catalogPath);
                 if (!catalogDir.Exists)
                     catalogDir.Create();
