@@ -180,8 +180,11 @@ namespace Lucene.Net.Store.Azure
             blob.FetchAttributes();
 
             // index files may be compressed so the actual length is stored in metatdata
+            string blobLegthMetadata;
+            bool hasMetadataValue = blob.Metadata.TryGetValue("CachedLength", out blobLegthMetadata);
+
             long blobLength;
-            if (long.TryParse(blob.Metadata["CachedLength"], out blobLength))
+            if (hasMetadataValue && long.TryParse(blobLegthMetadata, out blobLength))
                 return blobLength;
             else
                 return blob.Properties.Length; // fall back to actual blob size

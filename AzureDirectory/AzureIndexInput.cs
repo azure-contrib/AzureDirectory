@@ -47,13 +47,18 @@ namespace Lucene.Net.Store.Azure
                 else
                 {
                     long cachedLength = CacheDirectory.FileLength(fileName);
+                    string blobLengthMetadata;
+                    bool hasMetadataValue = blob.Metadata.TryGetValue("CachedLength", out blobLengthMetadata); 
                     long blobLength = blob.Properties.Length;
-                    long.TryParse(blob.Metadata["CachedLength"], out blobLength);
+                    if (hasMetadataValue) long.TryParse(blobLengthMetadata, out blobLength);
 
+                    string blobLastModifiedMetadata;
                     long longLastModified = 0;
                     DateTime blobLastModifiedUTC = blob.Properties.LastModified.Value.UtcDateTime;
-                    if (long.TryParse(blob.Metadata["CachedLastModified"], out longLastModified))
-                        blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
+                    if (blob.Metadata.TryGetValue("CachedLastModified", out blobLastModifiedMetadata)) {
+                        if (long.TryParse(blobLastModifiedMetadata, out longLastModified))
+                            blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
+                    }
                     
                     if (cachedLength != blobLength)
                         fFileNeeded = true;
