@@ -10,11 +10,23 @@ namespace Lucene.Net.Store.Azure
         public static Mutex GrabMutex(string name)
         {
             var mutexName = "luceneSegmentMutex_" + name;
-            try
+
+            Mutex mutex;
+            var notExisting = false;
+
+            if (Mutex.TryOpenExisting(mutexName, MutexRights.Synchronize | MutexRights.Modify, out mutex))
             {
-                return Mutex.OpenExisting(mutexName);
+                return mutex;
             }
-            catch (WaitHandleCannotBeOpenedException)
+
+            // Here we know the mutex either doesn't exist or we don't have the necessary permissions.
+
+            if (!Mutex.TryOpenExisting(mutexName, MutexRights.ReadPermissions | MutexRights.ChangePermissions, out mutex))
+            {
+                notExisting = true;
+            }
+
+            if (notExisting)
             {
                 var worldSid = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
                 var security = new MutexSecurity();
@@ -23,7 +35,7 @@ namespace Lucene.Net.Store.Azure
                 var mutexIsNew = false;
                 return new Mutex(false, mutexName, out mutexIsNew, security);
             }
-            catch (UnauthorizedAccessException)
+            else
             {
                 var m = Mutex.OpenExisting(mutexName, MutexRights.ReadPermissions | MutexRights.ChangePermissions);
                 var security = m.GetAccessControl();
@@ -35,6 +47,5 @@ namespace Lucene.Net.Store.Azure
                 return Mutex.OpenExisting(mutexName);
             }
         }
-
     }
 }
