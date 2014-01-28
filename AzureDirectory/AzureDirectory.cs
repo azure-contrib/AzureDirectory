@@ -15,7 +15,7 @@ namespace Lucene.Net.Store.Azure
         private CloudBlobContainer _blobContainer;
         private Directory _cacheDirectory;
 
-     
+
 
         /// <summary>
         /// Create an AzureDirectory
@@ -55,7 +55,7 @@ namespace Lucene.Net.Store.Azure
             get;
             set;
         }
-      
+
         public void ClearCache()
         {
             foreach (string file in _cacheDirectory.ListAll())
@@ -106,7 +106,7 @@ namespace Lucene.Net.Store.Azure
             _blobContainer = _blobClient.GetContainerReference(_catalog);
             _blobContainer.CreateIfNotExists();
         }
-        
+
         /// <summary>Returns an array of strings, one for each file in the directory. </summary>
         public override String[] ListAll()
         {
@@ -121,11 +121,9 @@ namespace Lucene.Net.Store.Azure
             // this always comes from the server
             try
             {
-                var blob = _blobContainer.GetBlockBlobReference(name);
-                blob.FetchAttributes();
-                return true;
+                return _blobContainer.GetBlockBlobReference(name).Exists();
             }
-            catch(Exception)
+            catch (Exception)
             {
                 return false;
             }
@@ -166,13 +164,17 @@ namespace Lucene.Net.Store.Azure
             Debug.WriteLine(String.Format("DELETE {0}/{1}", _blobContainer.Uri.ToString(), name));
 
             if (_cacheDirectory.FileExists(name + ".blob"))
+            {
                 _cacheDirectory.DeleteFile(name + ".blob");
+            }
 
             if (_cacheDirectory.FileExists(name))
+            {
                 _cacheDirectory.DeleteFile(name);
+            }
         }
 
-       
+
         /// <summary>Returns the length of a file in the directory. </summary>
         public override long FileLength(String name)
         {
@@ -185,9 +187,10 @@ namespace Lucene.Net.Store.Azure
 
             long blobLength;
             if (hasMetadataValue && long.TryParse(blobLegthMetadata, out blobLength))
+            {
                 return blobLength;
-            else
-                return blob.Properties.Length; // fall back to actual blob size
+            }
+            return blob.Properties.Length; // fall back to actual blob size
         }
 
         /// <summary>Creates a new, empty file in the directory with the given name.
@@ -224,7 +227,9 @@ namespace Lucene.Net.Store.Azure
             lock (_locks)
             {
                 if (!_locks.ContainsKey(name))
+                {
                     _locks.Add(name, new AzureLock(name, this));
+                }
                 return _locks[name];
             }
         }
