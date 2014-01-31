@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>AzureDirectory</id>
+        <version>$version$</version>
+        <authors>Richard Astbury</authors>
+        <owners>richorama</owners>
+        <licenseUrl>https://raw2.github.com/WindowsAzure-Contrib/AzureDirectory/master/License.txt</licenseUrl>
+        <projectUrl>https://github.com/WindowsAzure-Contrib/AzureDirectory</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>This project allows you to create Lucene Indexes and use them in Windows Azure.</description>
+        <summary>This project allows you to create Lucene Indexes and use them in Windows Azure. This project implements a low level Lucene Directory object called AzureDirectory around Windows Azure BlobStorage.</summary>
+    </metadata>
+</package>
