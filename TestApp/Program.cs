@@ -6,6 +6,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Store.Azure;
 using Microsoft.WindowsAzure.Storage;
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Text;
 
@@ -19,7 +20,7 @@ namespace TestApp
         {
             
             // default AzureDirectory stores cache in local temp folder
-            var azureDirectory = new AzureDirectory(CloudStorageAccount.DevelopmentStorageAccount, "TestCatalog6");
+            var azureDirectory = new AzureDirectory(CloudStorageAccount.Parse(ConfigurationManager.AppSettings["blobStorage"]), "TestCatalog6");
             var findexExists = IndexReader.IndexExists(azureDirectory);
 
             IndexWriter indexWriter = null;
