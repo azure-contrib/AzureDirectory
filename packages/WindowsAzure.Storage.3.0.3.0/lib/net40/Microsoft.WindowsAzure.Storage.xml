@@ -3057,16 +3057,12 @@
             Stores the parent directory.
             </summary>
         </member>
-        <member name="F:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.prefix">
-            <summary>
-            Stores the prefix this directory represents.
-            </summary>
-        </member>
-        <member name="M:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.#ctor(System.String,Microsoft.WindowsAzure.Storage.Blob.CloudBlobContainer)">
+        <member name="M:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.#ctor(Microsoft.WindowsAzure.Storage.StorageUri,System.String,Microsoft.WindowsAzure.Storage.Blob.CloudBlobContainer)">
             <summary>
             Initializes a new instance of the <see cref="T:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory"/> class given an address and a client.
             </summary>
-            <param name="absolutePath">The blob directory's address.</param>
+            <param name="uri">The blob directory's Uri.</param>
+            <param name="prefix">The blob directory's prefix.</param> 
             <param name="container">The container for the virtual directory.</param>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.GetPageBlobReference(System.String)">
@@ -3105,11 +3101,6 @@
             </summary>
             <param name="itemName">The name of the virtual subdirectory.</param>
             <returns>A <see cref="T:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory"/> object representing the virtual subdirectory.</returns>
-        </member>
-        <member name="M:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.InitializePrefix">
-            <summary>
-            Initializes the prefix.
-            </summary>
         </member>
         <member name="P:Microsoft.WindowsAzure.Storage.Blob.CloudBlobDirectory.ServiceClient">
             <summary>
@@ -15290,6 +15281,12 @@
             </summary>
             <value>Is <c>true</c> if use path style URIs; otherwise, <c>false</c>.</value>
         </member>
+        <member name="P:Microsoft.WindowsAzure.Storage.Table.CloudTableClient.AccountName">
+            <summary>
+            Gets the associated account name for the client.
+            </summary>
+            <value>The account name.</value>
+        </member>
         <member name="T:Microsoft.WindowsAzure.Storage.Table.IgnorePropertyAttribute">
             <summary>
             Represents a custom attribute that can be used to ignore entity properties during serialization/de-serialization.
@@ -17006,14 +17003,14 @@
             <summary>
             Callback for timeout timer. Aborts the AsyncStreamCopier operation if a timeout occurs.
             </summary>
-            <param name="state">Callback state.</param>
+            <param name="copier">AsyncStreamCopier operation.</param>
             <param name="timedOut">True if the timer has timed out, false otherwise.</param>
         </member>
-        <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.AsyncStreamCopier`1.ForceAbort(Microsoft.WindowsAzure.Storage.Core.Executor.ExecutionState{`0},System.Boolean)">
+        <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.AsyncStreamCopier`1.ForceAbort(Microsoft.WindowsAzure.Storage.Core.Util.AsyncStreamCopier{`0},System.Boolean)">
             <summary>
             Aborts the AsyncStreamCopier operation.
             </summary>
-            <param name="executionState">An object that stores state of the operation.</param>
+            <param name="copier">AsyncStreamCopier operation.</param>
             <param name="timedOut">True if aborted due to a time out, or false for a general cancellation.</param>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.AsyncStreamCopier`1.SignalCompletion">
@@ -18315,6 +18312,25 @@
             <param name="parseError">The delegate used to parse the error to get extended error information.</param>
             <returns>The storage exception.</returns>
         </member>
+        <member name="M:Microsoft.WindowsAzure.Storage.StorageException.TranslateExceptionWithPreBufferedStream(System.Exception,Microsoft.WindowsAzure.Storage.RequestResult,System.Func{System.IO.Stream,Microsoft.WindowsAzure.Storage.StorageExtendedErrorInformation},System.IO.Stream)">
+            <summary>
+            Translates the specified exception into a storage exception.
+            </summary>
+            <param name="ex">The exception to translate.</param>
+            <param name="reqResult">The request result.</param>
+            <param name="parseError">The delegate used to parse the error to get extended error information.</param>
+            <param name="responseStream">The error stream that contains the error information.</param>
+            <returns>The storage exception.</returns>
+        </member>
+        <member name="M:Microsoft.WindowsAzure.Storage.StorageException.CoreTranslate(System.Exception,Microsoft.WindowsAzure.Storage.RequestResult,System.Func{System.IO.Stream,Microsoft.WindowsAzure.Storage.StorageExtendedErrorInformation}@)">
+            <summary>
+            Tries to translate the specified exception into a storage exception.
+            </summary>
+            <param name="ex">The exception to translate.</param>
+            <param name="reqResult">The request result.</param>
+            <param name="parseError">The delegate used to parse the error to get extended error information.</param>
+            <returns>The storage exception or null.</returns>
+        </member>
         <member name="M:Microsoft.WindowsAzure.Storage.StorageException.TranslateDataServiceException(System.Exception,Microsoft.WindowsAzure.Storage.RequestResult,System.Func{System.IO.Stream,System.Collections.Generic.IDictionary{System.String,System.String},Microsoft.WindowsAzure.Storage.StorageExtendedErrorInformation})">
             <summary>
             Translates the specified exception into a storage exception.
@@ -18323,6 +18339,13 @@
             <param name="reqResult">The request result.</param>
             <param name="parseError">The delegate used to parse the error to get extended error information.</param>
             <returns>The storage exception.</returns>
+        </member>
+        <member name="M:Microsoft.WindowsAzure.Storage.StorageException.PopulateRequestResult(Microsoft.WindowsAzure.Storage.RequestResult,System.Net.HttpWebResponse)">
+            <summary>
+            Populate the RequestResult.
+            </summary>
+            <param name="reqResult">The request result.</param>
+            <param name="response">The web response.</param>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.StorageException.ToString">
             <summary>
@@ -19518,19 +19541,6 @@
             GetParentName(new Uri("http://test.blob.core.windows.net/mycontainer/", "/") will return "/mycontainer/"
             </example>
         </member>
-        <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.GetParentAddress(Microsoft.WindowsAzure.Storage.StorageUri,System.String,System.Nullable{System.Boolean})">
-            <summary>
-            Retrieves the parent address for a blob Uri.
-            </summary>
-            <param name="blobAddress">The blob address.</param>
-            <param name="delimiter">The delimiter.</param>
-            <param name="usePathStyleUris">If set to <c>true</c> use path style Uris.</param>
-            <returns>The address of the parent.</returns>
-            <example>
-            GetParentName(new Uri("http://test.blob.core.windows.net/mycontainer/myfolder/myblob", null))
-            will return "http://test.blob.core.windows.net/mycontainer/myfolder/"
-            </example>
-        </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.GetServiceClientBaseAddress(Microsoft.WindowsAzure.Storage.StorageUri,System.Nullable{System.Boolean})">
             <summary>
             Gets the service client base address.
@@ -19560,7 +19570,7 @@
             Appends a path to a list of URIs correctly using "/" as separator.
             </summary>
             <param name="uriList">The base URI.</param>
-            <param name="relativeOrAbsoluteUri">The relative or absolute URI.</param>
+            <param name="relativeUri">The relative or absolute URI.</param>
             <returns>The list of appended URIs.</returns>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.AppendPathToUri(Microsoft.WindowsAzure.Storage.StorageUri,System.String,System.String)">
@@ -19568,7 +19578,7 @@
             Appends a path to a list of URIs correctly using "/" as separator.
             </summary>
             <param name="uriList">The base URI.</param>
-            <param name="relativeOrAbsoluteUri">The relative or absolute URI.</param>
+            <param name="relativeUri">The relative or absolute URI.</param>
             <param name="sep">The separator.</param>
             <returns>The list of appended URIs.</returns>
         </member>
@@ -19577,7 +19587,7 @@
             Append a relative path to a URI, handling trailing slashes appropriately.
             </summary>
             <param name="uri">The base URI.</param>
-            <param name="relativeOrAbsoluteUri">The relative or absolute URI.</param>
+            <param name="relativeUri">The relative or absolute URI.</param>
             <returns>The appended Uri.</returns>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.AppendPathToSingleUri(System.Uri,System.String,System.String)">
@@ -19585,7 +19595,7 @@
             Append a relative path to a URI, handling trailing slashes appropriately.
             </summary>
             <param name="uri">The base URI.</param>
-            <param name="relativeOrAbsoluteUri">The relative or absolute URI.</param>
+            <param name="relativeUri">The relative or absolute URI.</param>
             <param name="sep">The separator.</param>
             <returns>The appended Uri.</returns>
         </member>
@@ -19623,6 +19633,7 @@
             <param name="usePathStyleUris">True to use path style Uris.</param>
             <param name="containerName">Name of the container.</param>
             <param name="containerUri">The container URI.</param>
+            <returns><c>true</c> when the container is an explicit container. <c>false</c>, otherwise.</returns> 
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.GetContainerNameAndBlobName(System.Uri,System.Nullable{System.Boolean},System.String@,System.String@)">
             <summary>
@@ -19632,6 +19643,7 @@
             <param name="usePathStyleUris">If set to <c>true</c> use path style Uris.</param>
             <param name="containerName">The resulting container name.</param>
             <param name="blobName">The resulting blob name.</param>
+            <returns>A bool representing whether the blob is in an explicit container or not.</returns>
         </member>
         <member name="M:Microsoft.WindowsAzure.Storage.Core.Util.NavigationHelper.ParseSnapshotTime(System.String)">
             <summary>
