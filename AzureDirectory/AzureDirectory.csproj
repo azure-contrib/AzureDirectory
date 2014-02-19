@@ -115,6 +115,7 @@
     <Compile Include="StreamOutput.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AzureDirectory.nuspec" />
     <None Include="packages.config" />
     <None Include="Sample App.config" />
   </ItemGroup>
