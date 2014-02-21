@@ -18,34 +18,20 @@ namespace Lucene.Net.Store.Azure
 
 
 
-        /// <summary>
-        /// Create an AzureDirectory
-        /// </summary>
-        /// <param name="storageAccount">storage account to use</param>
-        /// <param name="containerName">name of container (folder in blob storage)</param>
-        /// <param name="cacheDirectory">local Directory object to use for local cache</param>
-        public AzureDirectory(
-            CloudStorageAccount storageAccount,
-            string containerName = null,
-            Directory cacheDirectory = null,
-            bool compressBlobs = false)
-            : this(storageAccount, containerName, null, cacheDirectory, compressBlobs)
-        {
-        }
 
         /// <summary>
         /// Create an AzureDirectory
         /// </summary>
         /// <param name="storageAccount">storage account to use</param>
         /// <param name="containerName">name of container (folder in blob storage)</param>
-        /// <param name="rootFolder">path of the root folder inside the container</param>
         /// <param name="cacheDirectory">local Directory object to use for local cache</param>
+        /// <param name="rootFolder">path of the root folder inside the container</param>
         public AzureDirectory(
             CloudStorageAccount storageAccount,
             string containerName = null,
-            string rootFolder = null,
             Directory cacheDirectory = null,
-            bool compressBlobs = false)
+            bool compressBlobs = false,
+            string rootFolder = null)
         {
             if (storageAccount == null)
                 throw new ArgumentNullException("storageAccount");
