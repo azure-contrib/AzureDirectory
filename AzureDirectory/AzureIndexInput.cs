@@ -64,9 +64,12 @@ namespace Lucene.Net.Store.Azure
                         fFileNeeded = true;
                     else
                     {
-                        // there seems to be an error of 1 tick which happens every once in a while 
-                        // for now we will say that if they are within 1 tick of each other and same length 
-                        var cachedLastModifiedUTC = new DateTime(CacheDirectory.FileModified(fileName), DateTimeKind.Local).ToUniversalTime();
+
+                        // cachedLastModifiedUTC was not ouputting with a date (just time) and the time was always off
+                        long unixDate = CacheDirectory.FileModified(fileName);
+                        DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        var cachedLastModifiedUTC = start.AddMilliseconds(unixDate).ToUniversalTime();
+                        
                         if (cachedLastModifiedUTC != blobLastModifiedUTC)
                         {
                             var timeSpan = blobLastModifiedUTC.Subtract(cachedLastModifiedUTC);
