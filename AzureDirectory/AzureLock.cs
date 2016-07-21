@@ -25,9 +25,9 @@ namespace Lucene.Net.Store.Azure
         #region Lock methods
         override public bool IsLocked()
         {
-            var blob = _azureDirectory.BlobContainer.GetBlobReferenceFromServer(_lockFile);
             try
             {
+                var blob = _azureDirectory.BlobContainer.GetBlobReferenceFromServer(_lockFile);
                 Debug.Print("IsLocked() : {0}", _leaseid);
                 if (String.IsNullOrEmpty(_leaseid))
                 {
@@ -53,9 +53,9 @@ namespace Lucene.Net.Store.Azure
 
         public override bool Obtain()
         {
-            var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
             try
             {
+                var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
                 Debug.Print("AzureLock:Obtain({0}) : {1}", _lockFile, _leaseid);
                 if (String.IsNullOrEmpty(_leaseid))
                 {
