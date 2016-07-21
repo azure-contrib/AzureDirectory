@@ -1,4 +1,4 @@
-[![AzureDirectory Build Status](https://www.myget.org/BuildSource/Badge/azure-contrib?identifier=1ec65be3-9208-44b2-a38e-3e3fd17603c0)](https://www.myget.org/gallery/windowsazure-contrib)
+[![AzureDirectory Build Status](https://www.myget.org/BuildSource/Badge/azure-contrib?identifier=1ec65be3-9208-44b2-a38e-3e3fd17603c0)](https://www.myget.org/gallery/azure-contrib)
 
 # AzureDirectory Library for Lucene.Net
 
