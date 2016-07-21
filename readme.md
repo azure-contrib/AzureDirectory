@@ -1,4 +1,4 @@
-[![AzureDirectory Build Status](https://www.myget.org/BuildSource/Badge/azure-contrib?identifier=1ec65be3-9208-44b2-a38e-3e3fd17603c0)](https://www.myget.org/gallery/azure-contrib)
+[![Build status](https://ci.appveyor.com/api/projects/status/87h8usb13l8reiaa?svg=true)](https://ci.appveyor.com/project/richorama/azuredirectory)
 
 # AzureDirectory Library for Lucene.Net
 
