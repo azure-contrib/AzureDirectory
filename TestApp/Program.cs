@@ -64,6 +64,7 @@ namespace TestApp
             SearchForPhrase(searcher, "dog");
             SearchForPhrase(searcher, _random.Next(32768).ToString());
             SearchForPhrase(searcher, _random.Next(32768).ToString());
+            Console.WriteLine("Press any key to continue....");
             Console.Read();
         }
 
