@@ -24,7 +24,7 @@ namespace AzureDirectoryTests
             // default AzureDirectory stores cache in local temp folder
             var azureDirectory = new AzureDirectory(cloudStorageAccount, "testcatalog");
 
-            using (var indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_CURRENT), !IndexReader.IndexExists(azureDirectory), new Lucene.Net.Index.IndexWriter.MaxFieldLength(IndexWriter.DEFAULT_MAX_FIELD_LENGTH)))
+            using (var indexWriter = new IndexWriter(azureDirectory, new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), !IndexReader.IndexExists(azureDirectory), new Lucene.Net.Index.IndexWriter.MaxFieldLength(IndexWriter.DEFAULT_MAX_FIELD_LENGTH)))
             {
                 indexWriter.SetRAMBufferSizeMB(10.0);
 
@@ -58,7 +58,7 @@ namespace AzureDirectoryTests
 
         static int SearchForPhrase(IndexSearcher searcher, string phrase)
         {
-            var parser = new Lucene.Net.QueryParsers.QueryParser(Lucene.Net.Util.Version.LUCENE_CURRENT, "Body", new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_CURRENT));
+            var parser = new Lucene.Net.QueryParsers.QueryParser(Lucene.Net.Util.Version.LUCENE_30, "Body", new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30));
             var query = parser.Parse(phrase);
             return searcher.Search(query, 100).TotalHits;
         }
