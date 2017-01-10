@@ -40,11 +40,14 @@ namespace AzureDirectoryTests
                 Console.WriteLine("Total docs is {0}", indexWriter.NumDocs());
             }
 
-            using (var searcher = new IndexSearcher(azureDirectory))
+            for (var i = 0; i < 100; i++)
             {
-                Assert.AreNotEqual(0, SearchForPhrase(searcher, "dog"));
-                Assert.AreNotEqual(0, SearchForPhrase(searcher, "cat"));
-                Assert.AreNotEqual(0, SearchForPhrase(searcher, "car"));
+                using (var searcher = new IndexSearcher(azureDirectory))
+                {
+                    Assert.AreNotEqual(0, SearchForPhrase(searcher, "dog"));
+                    Assert.AreNotEqual(0, SearchForPhrase(searcher, "cat"));
+                    Assert.AreNotEqual(0, SearchForPhrase(searcher, "car"));
+                }
             }
 
             // check the container exists, and delete it
