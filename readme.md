@@ -15,7 +15,7 @@ This project allows you to create Lucene Indexes and use them in Azure.
 This project implements a low level Lucene Directory object called AzureDirectory around Windows Azure BlobStorage.
 
 ## Background
-Lucene is a mature Java based open source full text indexing and search engine and property store. 
+Lucene is a mature Java based open source full text indexing and search engine and property store.
 Lucene.NET is a mature port of that library to C#.
 Lucene/Lucene.Net provides:
 * Super simple API for storing documents with arbitrary properties
@@ -28,13 +28,21 @@ Lucene/Lucene.Net provides:
 	* Text query syntax (example: Title:(dog AND cat) OR Body:Lucen* )
 	* Programmatic expressions
 	* Ranked results with custom ranking algorithms
- 
+
 ## AzureDirectory
 AzureDirectory smartly uses a local Directory to cache files as they are created and automatically pushes them to Azure blob storage as appropriate. Likewise, it smartly caches blob files on the client when they change. This provides with a nice blend of just in time syncing of data local to indexers or searchers across multiple machines.
 
 With the flexibility that Lucene provides over data in memory versus storage and the just in time blob transfer that AzureDirectory provides you have great control over the composibility of where data is indexed and how it is consumed.
 
 To be more concrete: you can have 1..N worker roles adding documents to an index, and 1..N searcher webroles searching over the catalog in near real time.
+
+## Installation
+
+On the Package Manager Console in Visual Studio:
+
+```
+PM> Install-Package Azure.Directory
+```
 
 ## Usage
 
@@ -53,7 +61,7 @@ Create an App.Config or Web.Config and configure your accountinfo:
 	</appSettings>
 </configuration>
 ```         
- 
+
 To add documents to a catalog is as simple as
 
 ```cs
@@ -68,7 +76,7 @@ doc.Add(new Field("Body", "This is my body", Field.Store.YES, Field.Index.TOKENI
 indexWriter.AddDocument(doc);
 indexWriter.Close();
 ```
- 
+
 
 And searching is as easy as:
 
@@ -84,11 +92,11 @@ for (int i = 0; i < hits.Length(); i++)
     Console.WriteLine(doc.GetField("Title").StringValue());
 }
 ```            
- 
- 
+
+
 ## Caching and Compression
 
-AzureDirectory compresses blobs before sent to the blob storage. Blobs are automatically cached local to reduce roundtrips for blobs which haven't changed. 
+AzureDirectory compresses blobs before sent to the blob storage. Blobs are automatically cached local to reduce roundtrips for blobs which haven't changed.
 
 By default AzureDirectory stores this local cache in a temporary folder. You can easily control where the local cache is stored by passing in a Directory object for whatever type and location of storage you want.
 
@@ -97,7 +105,7 @@ This example stores the cache in a ram directory:
 ```cs
 var azureDirectory = new AzureDirectory("MyIndex", new RAMDirectory());
 ```
- 
+
 And this example stores in the file system in C:\myindex
 
 ```cs
@@ -108,7 +116,7 @@ var azureDirectory = new AzureDirectory("MyIndex", new FSDirectory(@"c:\myindex"
 
 Just like a normal Lucene index, calling optimize too often causes a lot of churn and not calling it enough causes too many segment files to be created, so call it "just enough" times. That will totally depend on your application and the nature of your pattern of adding and updating items to determine (which is why Lucene provides so many knobs to configure its behavior).
 
-The default compound file support that Lucene uses reduces the number of files that are generated...this means it deletes and merges files regularly which causes churn on the blob storage. Calling indexWriter.SetCompoundFiles(false) will give better performance. 
+The default compound file support that Lucene uses reduces the number of files that are generated...this means it deletes and merges files regularly which causes churn on the blob storage. Calling indexWriter.SetCompoundFiles(false) will give better performance.
 
 The version of Lucene.NET checked in as a binary is Version 3.0.3, but you can use any version of Lucene.NET you want by simply enlisting from the above open source site.
 
