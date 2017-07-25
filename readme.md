@@ -126,4 +126,4 @@ There is a LINQ to Lucene provider http://linqtoLucene.codeplex.com/Wiki/View.as
 
 ## License
 
-MIT
+ML-PL
