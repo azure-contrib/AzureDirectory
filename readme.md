@@ -120,10 +120,6 @@ The default compound file support that Lucene uses reduces the number of files t
 
 The version of Lucene.NET checked in as a binary is Version 3.0.3, but you can use any version of Lucene.NET you want by simply enlisting from the above open source site.
 
-## FAQ
-
-There is a LINQ to Lucene provider http://linqtoLucene.codeplex.com/Wiki/View.aspx?title=Project%20Documentation  on codeplex which allows you to define your schema as a strongly typed object and execute LINQ expressions against the index.
-
 ## License
 
 ML-PL
