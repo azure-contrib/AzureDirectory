@@ -21,8 +21,9 @@ namespace AzureDirectory.Core {
         public Directory CacheDirectory => _azureDirectory.CacheDirectory;
 
         [UsedImplicitly]
-        public AzureIndexInput(string resourceDescription, AzureDirectory azuredirectory, ICloudBlob blob) : base(
-            resourceDescription) {
+        public AzureIndexInput(string resourceDescription, AzureDirectory azuredirectory, ICloudBlob blob,
+                               IOContext context)
+            : base(resourceDescription) {
             _name = blob.Uri.Segments[^1];
 
 #if FULLDEBUG
@@ -38,7 +39,7 @@ namespace AzureDirectory.Core {
                 var fileName = _name;
 
                 // open the file in read only mode
-                _indexInput = CacheDirectory.OpenInput(fileName, new IOContext());
+                _indexInput = CacheDirectory.OpenInput(fileName, context);
             }
             finally {
                 _fileMutex.ReleaseMutex();

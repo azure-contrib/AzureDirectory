@@ -13,7 +13,9 @@ namespace AzureDirectoryTests.Core {
     public class IntegrationTests {
         private readonly string _connectionString;
 
-        public IntegrationTests(string connectionString = null) {
+        public IntegrationTests() : this(null) { }
+
+        public IntegrationTests(string connectionString) {
             _connectionString = connectionString;
         }
 
@@ -24,48 +26,65 @@ namespace AzureDirectoryTests.Core {
 
             var cloudStorageAccount = CloudStorageAccount.Parse(connectionString);
 
-            var azureDirectory = new AzureDirectory.Core.AzureDirectory(cloudStorageAccount, "testcatalog");
+            const string containerName = "testcatalog2";
 
-            using (var indexWriter = new IndexWriter(azureDirectory,
-                                                     new IndexWriterConfig(
-                                                         Lucene.Net.Util.LuceneVersion.LUCENE_48,
-                                                         new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48)))
-            ) {
+            var azureDirectory = new AzureDirectory.Core.AzureDirectory(cloudStorageAccount, containerName);
+
+            var indexWriterConfig = new IndexWriterConfig(
+                Lucene.Net.Util.LuceneVersion.LUCENE_48,
+                new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48));
+
+            int dog = 0, cat = 0, car = 0;
+
+            using (var indexWriter = new IndexWriter(azureDirectory, indexWriterConfig)) {
 
                 for (var iDoc = 0; iDoc < 10000; iDoc++) {
+                    var bodyText = GeneratePhrase(40);
                     var doc = new Document {
-                        new StringField("id", DateTime.Now.ToFileTimeUtc() + "-" + iDoc, Field.Store.YES),
-                        new StringField("Title", GeneratePhrase(10), Field.Store.YES),
-                        new StringField("Body", GeneratePhrase(40), Field.Store.YES)
+                        new TextField("id", DateTime.Now.ToFileTimeUtc() + "-" + iDoc, Field.Store.YES),
+                        new TextField("Title", GeneratePhrase(10), Field.Store.YES),
+                        new TextField("Body", bodyText, Field.Store.YES)
                     };
+                    dog += bodyText.Contains(" dog ") ? 1 : 0;
+                    cat += bodyText.Contains(" cat ") ? 1 : 0;
+                    car += bodyText.Contains(" car ") ? 1 : 0;
                     indexWriter.AddDocument(doc);
                 }
 
-                Console.WriteLine("Total docs is {0}", indexWriter.NumDocs);
+                Console.WriteLine("Total docs is {0}, {1} dog, {2} cat, {3} car", indexWriter.NumDocs, dog, cat, car);
             }
+            try {
 
-            for (var i = 0; i < 100; i++) {
                 var ireader = DirectoryReader.Open(azureDirectory);
-                var searcher = new IndexSearcher(ireader);
-                var searchForPhrase = SearchForPhrase(searcher, "dog");
-                Assert.AreNotEqual(0, searchForPhrase);
-                Assert.AreNotEqual(0, SearchForPhrase(searcher, "cat"));
-                Assert.AreNotEqual(0, SearchForPhrase(searcher, "car"));
+                for (var i = 0; i < 100; i++) {
+                    var searcher = new IndexSearcher(ireader);
+                    var searchForPhrase = SearchForPhrase(searcher, "dog");
+                    Assert.AreEqual(dog, searchForPhrase);
+                    searchForPhrase = SearchForPhrase(searcher, "cat");
+                    Assert.AreEqual(cat, searchForPhrase);
+                    searchForPhrase = SearchForPhrase(searcher, "car");
+                    Assert.AreEqual(car, searchForPhrase);
+                }
+                Console.WriteLine("Tests passsed");
             }
-
-            // check the container exists, and delete it
-            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference("testcatalog");
-            Assert.IsTrue(container.Exists()); // check the container exists
-            container.Delete();
-
+            catch (Exception x) {
+                Console.WriteLine("Tests failed:\n{0}", x);
+            }
+            finally {
+                // check the container exists, and delete it
+                var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+                var container = blobClient.GetContainerReference(containerName);
+                Assert.IsTrue(container.Exists()); // check the container exists
+                container.Delete();
+            }
         }
 
 
         private static int SearchForPhrase(IndexSearcher searcher, string phrase) {
             var parser = new Lucene.Net.QueryParsers.Classic.QueryParser(Lucene.Net.Util.LuceneVersion.LUCENE_48, "Body", new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48));
             var query = parser.Parse(phrase);
-            return searcher.Search(query, 100).TotalHits;
+            var topDocs = searcher.Search(query, 100);
+            return topDocs.TotalHits;
         }
 
         private static readonly Random Random = new Random();

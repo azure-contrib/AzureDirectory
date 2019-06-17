@@ -12,9 +12,11 @@ namespace AzureDirectory.Core {
         private readonly string _containerName;
         private readonly string _rootFolder;
         private CloudBlobClient _blobClient;
-        private CloudBlobContainer _blobContainer;
-        private Directory _cacheDirectory;
+        private readonly Dictionary<string, AzureLock> _locks = new Dictionary<string, AzureLock>();
+        private LockFactory _lockFactory = new NativeFSLockFactory();
 
+        public override LockFactory LockFactory => _lockFactory;
+        public CloudBlobContainer BlobContainer { get; private set; }
 
         /// <summary>
         /// Create an AzureDirectory
@@ -49,48 +51,9 @@ namespace AzureDirectory.Core {
             CompressBlobs = compressBlobs;
         }
 
-        public CloudBlobContainer BlobContainer => _blobContainer;
-
-        public bool CompressBlobs {
-            get;
-            set;
-        }
-
-        public Directory CacheDirectory {
-            get => _cacheDirectory;
-            set => _cacheDirectory = value;
-        }
-
-        private void _initCacheDirectory(Directory cacheDirectory) {
-            if (cacheDirectory != null) {
-                // save it off
-                _cacheDirectory = cacheDirectory;
-            }
-            else {
-                var cachePath = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "AzureDirectory");
-                var azureDir = new DirectoryInfo(cachePath);
-                if (!azureDir.Exists)
-                    azureDir.Create();
-
-                var catalogPath = Path.Combine(cachePath, _containerName);
-                var catalogDir = new DirectoryInfo(catalogPath);
-                if (!catalogDir.Exists)
-                    catalogDir.Create();
-
-                _cacheDirectory = FSDirectory.Open(catalogPath);
-            }
-
-            CreateContainer();
-        }
-
-        public void CreateContainer() {
-            _blobContainer = _blobClient.GetContainerReference(_containerName);
-            _blobContainer.CreateIfNotExists();
-        }
-
         /// <summary>Returns an array of strings, one for each file in the directory. </summary>
         public override string[] ListAll() {
-            var results = from blob in _blobContainer.ListBlobs(_rootFolder)
+            var results = from blob in BlobContainer.ListBlobs(_rootFolder)
                           select blob.Uri.AbsolutePath.Substring(blob.Uri.AbsolutePath.LastIndexOf('/') + 1);
             return results.ToArray();
         }
@@ -100,34 +63,11 @@ namespace AzureDirectory.Core {
         public override bool FileExists(string name) {
             // this always comes from the server
             try {
-                return _blobContainer.GetBlockBlobReference(_rootFolder + name).Exists();
+                return BlobContainer.GetBlockBlobReference(_rootFolder + name).Exists();
             }
             catch (Exception) {
                 return false;
             }
-        }
-
-        /// <summary>Returns the time the named file was last modified. </summary>
-        public long FileModified(string name) {
-            // this always has to come from the server
-            try {
-                var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
-                blob.FetchAttributes();
-                return blob.Properties.LastModified?.UtcDateTime.ToFileTimeUtc() ?? 0;
-            }
-            catch {
-                return 0;
-            }
-        }
-
-        /// <summary>Set the modified time of an existing file to now. </summary>
-        public void TouchFile(string name) {
-            //BlobProperties props = _blobContainer.GetBlobProperties(_rootFolder + name);
-            //_blobContainer.UpdateBlobMetadata(props);
-            // I have no idea what the semantics of this should be...hmmmm...
-            // we never seem to get called
-            //_cacheDirectory.TouchFile(name);
-            //SetCachedBlobProperties(props);
         }
 
         /// <summary>Removes an existing file in the directory. </summary>
@@ -140,19 +80,18 @@ namespace AzureDirectory.Core {
             // since that is what Lucene is expecting in order for it to retry.
             // If we remove the main storage file first, then this will never retry to clean out
             // local storage because the FileExist method will always return false.
-            _cacheDirectory.DeleteFile(name + ".blob");
-            _cacheDirectory.DeleteFile(name);
+            CacheDirectory.DeleteFile(name + ".blob");
+            CacheDirectory.DeleteFile(name);
 
             //if we've made it this far then the cache directly file has been successfully removed so now we'll do the master
 
-            var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
+            var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
             blob.DeleteIfExists();
         }
 
-
         /// <summary>Returns the length of a file in the directory. </summary>
         public override long FileLength(string name) {
-            var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
+            var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
             blob.FetchAttributes();
 
             // index files may be compressed so the actual length is stored in metadata
@@ -164,47 +103,20 @@ namespace AzureDirectory.Core {
             return blob.Properties.Length; // fall back to actual blob size
         }
 
-        public override IndexOutput CreateOutput(string name, IOContext context) {
-            var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
-            return new AzureIndexOutput(this, blob);
-        }
-
         public override void Sync(ICollection<string> names) {
             // TODO: Figure out what to do here
         }
 
         public override IndexInput OpenInput(string name, IOContext context) {
             try {
-                var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
+                var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
                 blob.FetchAttributes();
-                return new AzureIndexInput("someToken", this, blob); // TODO: replace someToken
+                return new AzureIndexInput("someToken", this, blob, context); // TODO: replace someToken
             }
             catch (Exception err) {
                 throw new FileNotFoundException(name, err);
             }
         }
-
-        /// <summary>Creates a new, empty file in the directory with the given name.
-        /// Returns a stream writing this file. 
-        /// </summary>
-        public IndexOutput CreateOutput(string name) {
-            var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
-            return new AzureIndexOutput(this, blob);
-        }
-
-        /// <summary>Returns a stream reading an existing file. </summary>
-        public IndexInput OpenInput(string name) {
-            try {
-                var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
-                blob.FetchAttributes();
-                return new AzureIndexInput("someToken", this, blob); // TODO: replace someToken
-            }
-            catch (Exception err) {
-                throw new FileNotFoundException(name, err);
-            }
-        }
-
-        private readonly Dictionary<string, AzureLock> _locks = new Dictionary<string, AzureLock>();
 
         /// <summary>Construct a {@link Lock}.</summary>
         /// <param name="name">the name of the lock file
@@ -224,20 +136,38 @@ namespace AzureDirectory.Core {
                     _locks[name].BreakLock();
                 }
             }
-            _cacheDirectory.ClearLock(name);
+            CacheDirectory.ClearLock(name);
         }
 
         /// <summary>Closes the store. </summary>
         protected override void Dispose(bool disposing) {
-            _blobContainer = null;
+            BlobContainer = null;
             _blobClient = null;
         }
 
         public override void SetLockFactory(LockFactory lockFactory) {
-            throw new NotImplementedException();
+            _lockFactory = lockFactory;
         }
 
-        public override LockFactory LockFactory => new NativeFSLockFactory();
+        public bool CompressBlobs {
+            get;
+            set;
+        }
+
+        public Directory CacheDirectory { get; set; }
+
+        public void CreateContainer() {
+            BlobContainer = _blobClient.GetContainerReference(_containerName);
+            BlobContainer.CreateIfNotExists();
+        }
+
+        /// <summary>Creates a new, empty file in the directory with the given name.
+        /// Returns a stream writing this file. 
+        /// </summary>
+        public override IndexOutput CreateOutput(string name, IOContext context) {
+            var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
+            return new AzureIndexOutput(this, blob, context);
+        }
 
         public virtual bool ShouldCompressFile(string path) {
             if (!CompressBlobs)
@@ -262,8 +192,26 @@ namespace AzureDirectory.Core {
             }
         }
 
-        public StreamOutput CreateCachedOutputAsStream(string name) {
-            return new StreamOutput(CacheDirectory.CreateOutput(name, new IOContext(IOContext.UsageContext.DEFAULT)));
+        private void _initCacheDirectory(Directory cacheDirectory) {
+            if (cacheDirectory != null) {
+                // save it off
+                CacheDirectory = cacheDirectory;
+            }
+            else {
+                var cachePath = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "AzureDirectory");
+                var azureDir = new DirectoryInfo(cachePath);
+                if (!azureDir.Exists)
+                    azureDir.Create();
+
+                var catalogPath = Path.Combine(cachePath, _containerName);
+                var catalogDir = new DirectoryInfo(catalogPath);
+                if (!catalogDir.Exists)
+                    catalogDir.Create();
+
+                CacheDirectory = FSDirectory.Open(catalogPath);
+            }
+
+            CreateContainer();
         }
 
     }
