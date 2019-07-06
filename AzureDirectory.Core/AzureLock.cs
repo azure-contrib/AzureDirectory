@@ -79,24 +79,22 @@ namespace AzureDirectory.Core {
         private Timer _renewTimer;
 
         public void Renew() {
-            if (!string.IsNullOrEmpty(_leaseid)) {
-                Debug.Print("AzureLock:Renew({0} : {1}", _lockFile, _leaseid);
-                var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
-                blob.RenewLease(new AccessCondition { LeaseId = _leaseid });
-            }
+            if (string.IsNullOrEmpty(_leaseid)) return;
+            Debug.Print("AzureLock:Renew({0} : {1}", _lockFile, _leaseid);
+            var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
+            blob.RenewLease(new AccessCondition { LeaseId = _leaseid });
         }
 
         public void Release() {
             Debug.Print("AzureLock:Release({0}) {1}", _lockFile, _leaseid);
-            if (!string.IsNullOrEmpty(_leaseid)) {
-                var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
-                blob.ReleaseLease(new AccessCondition { LeaseId = _leaseid });
-                if (_renewTimer != null) {
-                    _renewTimer.Dispose();
-                    _renewTimer = null;
-                }
-                _leaseid = null;
+            if (string.IsNullOrEmpty(_leaseid)) return;
+            var blob = _azureDirectory.BlobContainer.GetBlockBlobReference(_lockFile);
+            blob.ReleaseLease(new AccessCondition { LeaseId = _leaseid });
+            if (_renewTimer != null) {
+                _renewTimer.Dispose();
+                _renewTimer = null;
             }
+            _leaseid = null;
         }
         #endregion
 
@@ -107,6 +105,7 @@ namespace AzureDirectory.Core {
                 blob.BreakLease();
             }
             catch (Exception) {
+                // ignored
             }
             _leaseid = null;
         }
@@ -116,18 +115,14 @@ namespace AzureDirectory.Core {
         }
 
         private bool _handleWebException(ICloudBlob blob, StorageException err) {
-            if (err.RequestInformation.HttpStatusCode == 404 || err.RequestInformation.HttpStatusCode == 409) {
-                _azureDirectory.CreateContainer();
-                using (var stream = new MemoryStream())
-                using (var writer = new StreamWriter(stream)) {
-                    writer.Write(_lockFile);
-                    blob.UploadFromStream(stream);
-                }
-                return true;
-            }
-            return false;
+            if (err.RequestInformation.HttpStatusCode != 404 && err.RequestInformation.HttpStatusCode != 409)
+                return false;
+            _azureDirectory.CreateContainer();
+            using var stream = new MemoryStream();
+            using var writer = new StreamWriter(stream);
+            writer.Write(_lockFile);
+            blob.UploadFromStream(stream);
+            return true;
         }
-
     }
-
 }
