@@ -12,9 +12,9 @@ namespace AzureDirectory.Core {
         private readonly string _containerName;
         private readonly string _rootFolder;
         private CloudBlobClient _blobClient;
+        private readonly Dictionary<string, AzureIndexOutput> _nameCache = new Dictionary<string, AzureIndexOutput>();
         private readonly Dictionary<string, AzureLock> _locks = new Dictionary<string, AzureLock>();
         private LockFactory _lockFactory = new NativeFSLockFactory();
-
         public override LockFactory LockFactory => _lockFactory;
         public CloudBlobContainer BlobContainer { get; private set; }
 
@@ -23,15 +23,13 @@ namespace AzureDirectory.Core {
         /// </summary>
         /// <param name="storageAccount">storage account to use</param>
         /// <param name="containerName">name of container (folder in blob storage)</param>
-        /// <param name="cacheDirectory">local Directory object to use for local cache</param>
-        /// <param name="compressBlobs"></param>
         /// <param name="rootFolder">path of the root folder inside the container</param>
         public AzureDirectory(
             CloudStorageAccount storageAccount,
             string containerName = null,
-            Directory cacheDirectory = null,
-            bool compressBlobs = false,
             string rootFolder = null) {
+
+            _rootFolder = rootFolder;
             if (storageAccount == null)
                 throw new ArgumentNullException(nameof(storageAccount));
 
@@ -47,8 +45,7 @@ namespace AzureDirectory.Core {
 
 
             _blobClient = storageAccount.CreateCloudBlobClient();
-            _initCacheDirectory(cacheDirectory);
-            CompressBlobs = compressBlobs;
+            CreateContainer();
         }
 
         /// <summary>Returns an array of strings, one for each file in the directory. </summary>
@@ -72,19 +69,6 @@ namespace AzureDirectory.Core {
 
         /// <summary>Removes an existing file in the directory. </summary>
         public override void DeleteFile(string name) {
-            // We're going to try to remove this from the cache directory first,
-            // because the IndexFileDeleter will call this file to remove files 
-            // but since some files will be in use still, it will retry when a reader/searcher
-            // is refreshed until the file is no longer locked. So we need to try to remove 
-            // from local storage first and if it fails, let it keep throwing the IOException
-            // since that is what Lucene is expecting in order for it to retry.
-            // If we remove the main storage file first, then this will never retry to clean out
-            // local storage because the FileExist method will always return false.
-            CacheDirectory.DeleteFile(name + ".blob");
-            CacheDirectory.DeleteFile(name);
-
-            //if we've made it this far then the cache directly file has been successfully removed so now we'll do the master
-
             var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
             blob.DeleteIfExists();
         }
@@ -104,14 +88,20 @@ namespace AzureDirectory.Core {
         }
 
         public override void Sync(ICollection<string> names) {
-            // TODO: Figure out what to do here
+            // TODO: This all is purely guesswork, no idea what has to be done here. -- Aviad.
+            foreach (var name in names) {
+                if (_nameCache.ContainsKey(name)) {
+                    _nameCache[name].Flush();
+                }
+            }
         }
 
         public override IndexInput OpenInput(string name, IOContext context) {
+            // TODO: Figure out how IOContext comes into play here. So far it doesn't -- Aviad
             try {
                 var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
                 blob.FetchAttributes();
-                return new AzureIndexInput("someToken", this, blob, context); // TODO: replace someToken
+                return new AzureIndexInput(name, blob);
             }
             catch (Exception err) {
                 throw new FileNotFoundException(name, err);
@@ -136,7 +126,6 @@ namespace AzureDirectory.Core {
                     _locks[name].BreakLock();
                 }
             }
-            CacheDirectory.ClearLock(name);
         }
 
         /// <summary>Closes the store. </summary>
@@ -149,13 +138,6 @@ namespace AzureDirectory.Core {
             _lockFactory = lockFactory;
         }
 
-        public bool CompressBlobs {
-            get;
-            set;
-        }
-
-        public Directory CacheDirectory { get; set; }
-
         public void CreateContainer() {
             BlobContainer = _blobClient.GetContainerReference(_containerName);
             BlobContainer.CreateIfNotExists();
@@ -165,55 +147,11 @@ namespace AzureDirectory.Core {
         /// Returns a stream writing this file. 
         /// </summary>
         public override IndexOutput CreateOutput(string name, IOContext context) {
+            // TODO: Figure out how IOContext comes into play here. So far it doesn't -- Aviad
             var blob = BlobContainer.GetBlockBlobReference(_rootFolder + name);
-            return new AzureIndexOutput(this, blob, context);
+            var indexOutput = new AzureIndexOutput(blob);
+            _nameCache[name] = indexOutput;
+            return indexOutput;
         }
-
-        public virtual bool ShouldCompressFile(string path) {
-            if (!CompressBlobs)
-                return false;
-
-            var ext = Path.GetExtension(path);
-            switch (ext) {
-                case ".cfs":
-                case ".fdt":
-                case ".fdx":
-                case ".frq":
-                case ".tis":
-                case ".tii":
-                case ".nrm":
-                case ".tvx":
-                case ".tvd":
-                case ".tvf":
-                case ".prx":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private void _initCacheDirectory(Directory cacheDirectory) {
-            if (cacheDirectory != null) {
-                // save it off
-                CacheDirectory = cacheDirectory;
-            }
-            else {
-                var cachePath = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "AzureDirectory");
-                var azureDir = new DirectoryInfo(cachePath);
-                if (!azureDir.Exists)
-                    azureDir.Create();
-
-                var catalogPath = Path.Combine(cachePath, _containerName);
-                var catalogDir = new DirectoryInfo(catalogPath);
-                if (!catalogDir.Exists)
-                    catalogDir.Create();
-
-                CacheDirectory = FSDirectory.Open(catalogPath);
-            }
-
-            CreateContainer();
-        }
-
     }
-
 }
