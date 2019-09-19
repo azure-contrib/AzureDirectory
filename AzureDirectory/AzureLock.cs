@@ -1,5 +1,7 @@
-﻿using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+﻿//using Microsoft.WindowsAzure.Storage;
+//using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -95,8 +97,11 @@ namespace Lucene.Net.Store.Azure
                 blob.RenewLease(new AccessCondition { LeaseId = _leaseid });
             }
         }
-
-        public override void Release()
+        protected override void Dispose(bool disposing)
+        {
+            Release();
+        }
+        public /*override*/ void Release()
         {
             Debug.Print("AzureLock:Release({0}) {1}", _lockFile, _leaseid);
             if (!String.IsNullOrEmpty(_leaseid))

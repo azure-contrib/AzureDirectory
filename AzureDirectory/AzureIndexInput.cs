@@ -1,4 +1,5 @@
-﻿using Microsoft.WindowsAzure.Storage.Blob;
+﻿//using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -22,7 +23,7 @@ namespace Lucene.Net.Store.Azure
 
         public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
 
-        public AzureIndexInput(AzureDirectory azuredirectory, ICloudBlob blob)
+        public AzureIndexInput(AzureDirectory azuredirectory, ICloudBlob blob,string resourceDescription):base(resourceDescription)
         {
             _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
 
@@ -57,7 +58,8 @@ namespace Lucene.Net.Store.Azure
                     DateTime blobLastModifiedUTC = blob.Properties.LastModified.Value.UtcDateTime;
                     if (blob.Metadata.TryGetValue("CachedLastModified", out blobLastModifiedMetadata)) {
                         if (long.TryParse(blobLastModifiedMetadata, out longLastModified))
-                            blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
+                            blobLastModifiedUTC = DateTime.FromFileTimeUtc(longLastModified);
+                            //blobLastModifiedUTC = new DateTime(longLastModified).ToUniversalTime();
                     }
                     
                     if (cachedLength != blobLength)
@@ -66,10 +68,13 @@ namespace Lucene.Net.Store.Azure
                     {
 
                         // cachedLastModifiedUTC was not ouputting with a date (just time) and the time was always off
-                        long unixDate = CacheDirectory.FileModified(fileName);
-                        DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                        var cachedLastModifiedUTC = start.AddMilliseconds(unixDate).ToUniversalTime();
-                        
+                        var filePath = Path.Combine(_azureDirectory.CatalogPath,fileName);
+                        var lastModified = File.GetLastWriteTimeUtc(filePath);
+                        //long unixDate = CacheDirectory.FileModified(fileName);
+                        //DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        //var cachedLastModifiedUTC = start.AddMilliseconds(unixDate).ToUniversalTime();
+                        var cachedLastModifiedUTC= lastModified;
+
                         if (cachedLastModifiedUTC != blobLastModifiedUTC)
                         {
                             var timeSpan = blobLastModifiedUTC.Subtract(cachedLastModifiedUTC);
@@ -107,7 +112,7 @@ namespace Lucene.Net.Store.Azure
                     }
 
                     // and open it as an input 
-                    _indexInput = CacheDirectory.OpenInput(fileName);
+                    _indexInput = CacheDirectory.OpenInput(fileName,IOContext.DEFAULT);
                 }
                 else
                 {
@@ -116,7 +121,7 @@ namespace Lucene.Net.Store.Azure
 #endif
 
                     // open the file in read only mode
-                    _indexInput = CacheDirectory.OpenInput(fileName);
+                    _indexInput = CacheDirectory.OpenInput(fileName,IOContext.DEFAULT);
                 }
             }
             finally
@@ -155,7 +160,7 @@ namespace Lucene.Net.Store.Azure
             }
         }
 
-        public AzureIndexInput(AzureIndexInput cloneInput)
+        public AzureIndexInput(AzureIndexInput cloneInput,string resourceDescription):base(resourceDescription)
         {
             _fileMutex = BlobMutexManager.GrabMutex(cloneInput._name);
             _fileMutex.WaitOne();
@@ -192,13 +197,13 @@ namespace Lucene.Net.Store.Azure
             _indexInput.ReadBytes(b, offset, len);
         }
 
-        public override long FilePointer
-        {
-            get
-            {
-                return _indexInput.FilePointer;
-            }
-        }
+        //public override long FilePointer
+        //{
+        //    get
+        //    {
+        //        return _indexInput.FilePointer;
+        //    }
+        //}
 
         public override void Seek(long pos)
         {
@@ -226,10 +231,11 @@ namespace Lucene.Net.Store.Azure
             }
         }
 
-        public override long Length()
-        {
-            return _indexInput.Length();
-        }
+        //public override long Length()
+        //{
+        //    return _indexInput.Length();
+        //}
+        public override long Length => _indexInput.Length;
 
         public override System.Object Clone()
         {
@@ -237,7 +243,7 @@ namespace Lucene.Net.Store.Azure
             try
             {
                 _fileMutex.WaitOne();
-                AzureIndexInput input = new AzureIndexInput(this);
+                AzureIndexInput input = new AzureIndexInput(this,"clone");
                 clone = (IndexInput)input;
             }
             catch (System.Exception err)
@@ -252,5 +258,9 @@ namespace Lucene.Net.Store.Azure
             return clone;
         }
 
+        public override long GetFilePointer()
+        {
+            return _indexInput.GetFilePointer();
+        }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Microsoft.WindowsAzure.Storage.Blob;
+﻿using Lucene.Net.Support;
+using Microsoft.Azure.Storage.Blob;
+//using Microsoft.WindowsAzure.Storage.Blob;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -19,10 +21,12 @@ namespace Lucene.Net.Store.Azure
         private IndexOutput _indexOutput;
         private Mutex _fileMutex;
         private ICloudBlob _blob;
+        private readonly CRC32 _crc;
         public Lucene.Net.Store.Directory CacheDirectory { get { return _azureDirectory.CacheDirectory; } }
 
         public AzureIndexOutput(AzureDirectory azureDirectory, ICloudBlob blob)
         {
+            _crc = new CRC32();
             _fileMutex = BlobMutexManager.GrabMutex(_name); 
             _fileMutex.WaitOne();
             try
@@ -33,7 +37,7 @@ namespace Lucene.Net.Store.Azure
                 _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
 
                 // create the local cache one we will operate against...
-                _indexOutput = CacheDirectory.CreateOutput(_name);
+                _indexOutput = CacheDirectory.CreateOutput(_name,IOContext.DEFAULT);
             }
             finally
             {
@@ -68,7 +72,7 @@ namespace Lucene.Net.Store.Azure
                 }
                 else
                 {
-                    blobStream = new StreamInput(CacheDirectory.OpenInput(fileName));
+                    blobStream = new StreamInput(CacheDirectory.OpenInput(fileName,IOContext.DEFAULT));
                 }
 
                 try
@@ -78,7 +82,13 @@ namespace Lucene.Net.Store.Azure
 
                     // set the metadata with the original index file properties
                     _blob.Metadata["CachedLength"] = originalLength.ToString();
-                    _blob.Metadata["CachedLastModified"] = CacheDirectory.FileModified(fileName).ToString();
+
+                    var filePath = Path.Combine(_azureDirectory.CatalogPath, fileName);
+                    var lastModified = File.GetLastWriteTimeUtc(filePath);
+                    long fileTimeUtc = lastModified.ToFileTimeUtc();
+
+                    //_blob.Metadata["CachedLastModified"] = CacheDirectory.FileModified(fileName).ToString();
+                    _blob.Metadata["CachedLastModified"] = fileTimeUtc.ToString();
                     _blob.SetMetadata();
 
                     Debug.WriteLine(string.Format("PUT {1} bytes to {0} in cloud", _name, blobStream.Length));
@@ -111,11 +121,11 @@ namespace Lucene.Net.Store.Azure
 
             try
             {
-                using (var indexInput = CacheDirectory.OpenInput(fileName))
+                using (var indexInput = CacheDirectory.OpenInput(fileName,IOContext.DEFAULT))
                 using (var compressor = new DeflateStream(compressedStream, CompressionMode.Compress, true))
                 {
                     // compress to compressedOutputStream
-                    byte[] bytes = new byte[indexInput.Length()];
+                    byte[] bytes = new byte[indexInput.Length];
                     indexInput.ReadBytes(bytes, 0, (int)bytes.Length);
                     compressor.Write(bytes, 0, (int)bytes.Length);
                 }
@@ -161,17 +171,24 @@ namespace Lucene.Net.Store.Azure
             _indexOutput.WriteBytes(b, offset, length);
         }
 
-        public override long FilePointer
+        public /*override*/ long FilePointer
         {
             get
             {
-                return _indexOutput.FilePointer;
+                return _indexOutput.GetFilePointer();
             }
         }
+
+        public override long Checksum => _indexOutput.Checksum;
 
         public override void Seek(long pos)
         {
             _indexOutput.Seek(pos);
+        }
+
+        public override long GetFilePointer()
+        {
+            return _indexOutput.GetFilePointer();
         }
     }
 }

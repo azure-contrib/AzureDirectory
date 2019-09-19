@@ -1,5 +1,5 @@
-﻿using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+﻿using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,9 +15,10 @@ namespace Lucene.Net.Store.Azure
         private CloudBlobClient _blobClient;
         private CloudBlobContainer _blobContainer;
         private Directory _cacheDirectory;
-
-
-
+        private LockFactory _lockFactory = new NativeFSLockFactory();
+        public override LockFactory LockFactory => _lockFactory;
+        public string CacheDirectoryPath { get; set; }
+        public string CatalogPath { get; set; }
 
         /// <summary>
         /// Create an AzureDirectory
@@ -28,11 +29,14 @@ namespace Lucene.Net.Store.Azure
         /// <param name="rootFolder">path of the root folder inside the container</param>
         public AzureDirectory(
             CloudStorageAccount storageAccount,
+            string cacheDirectoryPath,
             string containerName = null,
-            Directory cacheDirectory = null,
+            //Directory cacheDirectory = null,
             bool compressBlobs = false,
-            string rootFolder = null)
+            string rootFolder = null
+            )
         {
+            CacheDirectoryPath = cacheDirectoryPath;
             if (storageAccount == null)
                 throw new ArgumentNullException("storageAccount");
 
@@ -52,7 +56,8 @@ namespace Lucene.Net.Store.Azure
 
 
             _blobClient = storageAccount.CreateCloudBlobClient();
-            _initCacheDirectory(cacheDirectory);
+            //_initCacheDirectory(cacheDirectory);
+            _initCacheDirectory(null);
             this.CompressBlobs = compressBlobs;
         }
 
@@ -99,17 +104,19 @@ namespace Lucene.Net.Store.Azure
             }
             else
             {
-                var cachePath = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "AzureDirectory");
+                var cachePath = CacheDirectoryPath;
+                if(string.IsNullOrEmpty(cachePath))
+                    Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "AzureDirectory");
                 var azureDir = new DirectoryInfo(cachePath);
                 if (!azureDir.Exists)
                     azureDir.Create();
 
-                var catalogPath = Path.Combine(cachePath, _containerName);
-                var catalogDir = new DirectoryInfo(catalogPath);
+                CatalogPath = Path.Combine(cachePath, _containerName);
+                var catalogDir = new DirectoryInfo(CatalogPath);
                 if (!catalogDir.Exists)
                     catalogDir.Create();
 
-                _cacheDirectory = FSDirectory.Open(catalogPath);
+                _cacheDirectory = FSDirectory.Open(CatalogPath);
             }
 
             CreateContainer();
@@ -144,7 +151,7 @@ namespace Lucene.Net.Store.Azure
         }
 
         /// <summary>Returns the time the named file was last modified. </summary>
-        public override long FileModified(String name)
+        public /*override*/ long FileModified(String name)
         {
             // this always has to come from the server
             try
@@ -160,15 +167,15 @@ namespace Lucene.Net.Store.Azure
         }
 
         /// <summary>Set the modified time of an existing file to now. </summary>
-        public override void TouchFile(System.String name)
-        {
-            //BlobProperties props = _blobContainer.GetBlobProperties(_rootFolder + name);
-            //_blobContainer.UpdateBlobMetadata(props);
-            // I have no idea what the semantics of this should be...hmmmm...
-            // we never seem to get called
-            _cacheDirectory.TouchFile(name);
-            //SetCachedBlobProperties(props);
-        }
+        //public override void TouchFile(System.String name)
+        //{
+        //    //BlobProperties props = _blobContainer.GetBlobProperties(_rootFolder + name);
+        //    //_blobContainer.UpdateBlobMetadata(props);
+        //    // I have no idea what the semantics of this should be...hmmmm...
+        //    // we never seem to get called
+        //    _cacheDirectory.TouchFile(name);
+        //    //SetCachedBlobProperties(props);
+        //}
 
         /// <summary>Removes an existing file in the directory. </summary>
         public override void DeleteFile(System.String name)
@@ -230,20 +237,20 @@ namespace Lucene.Net.Store.Azure
         /// <summary>Creates a new, empty file in the directory with the given name.
         /// Returns a stream writing this file. 
         /// </summary>
-        public override IndexOutput CreateOutput(System.String name)
+        public override IndexOutput CreateOutput(System.String name,IOContext context)
         {
             var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
             return new AzureIndexOutput(this, blob);
         }
 
         /// <summary>Returns a stream reading an existing file. </summary>
-        public override IndexInput OpenInput(System.String name)
+        public override IndexInput OpenInput(System.String name,IOContext context)
         {
             try
             {
                 var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
                 blob.FetchAttributes();
-                return new AzureIndexInput(this, blob);
+                return new AzureIndexInput(this, blob,"azureDirectory");
             }
             catch (Exception err)
             {
@@ -313,14 +320,23 @@ namespace Lucene.Net.Store.Azure
         }
         public StreamInput OpenCachedInputAsStream(string name)
         {
-            return new StreamInput(CacheDirectory.OpenInput(name));
+            return new StreamInput(CacheDirectory.OpenInput(name,IOContext.DEFAULT));
         }
 
         public StreamOutput CreateCachedOutputAsStream(string name)
         {
-            return new StreamOutput(CacheDirectory.CreateOutput(name));
+            return new StreamOutput(CacheDirectory.CreateOutput(name,IOContext.DEFAULT));
         }
 
+        public override void Sync(ICollection<string> names)
+        {
+            //throw new NotImplementedException();
+        }
+
+        public override void SetLockFactory(LockFactory lockFactory)
+        {
+            _lockFactory = lockFactory;
+        }
     }
 
 }
