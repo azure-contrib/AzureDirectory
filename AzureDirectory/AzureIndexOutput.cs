@@ -27,6 +27,9 @@ namespace Lucene.Net.Store.Azure
         public AzureIndexOutput(AzureDirectory azureDirectory, ICloudBlob blob)
         {
             _crc = new CRC32();
+
+            _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
+
             _fileMutex = BlobMutexManager.GrabMutex(_name); 
             _fileMutex.WaitOne();
             try
@@ -34,7 +37,6 @@ namespace Lucene.Net.Store.Azure
                 _azureDirectory = azureDirectory;
                 _blobContainer = _azureDirectory.BlobContainer;
                 _blob = blob;
-                _name = blob.Uri.Segments[blob.Uri.Segments.Length - 1];
 
                 // create the local cache one we will operate against...
                 _indexOutput = CacheDirectory.CreateOutput(_name,IOContext.DEFAULT);
