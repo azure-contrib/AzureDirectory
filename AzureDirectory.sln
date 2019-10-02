@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29230.47
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDirectoryTests", "AzureDirectoryTests\AzureDirectoryTests.csproj", "{49D6699E-E8F0-4030-A52C-BCE3E77358C7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDirectory.Tests", "AzureDirectory.Tests\AzureDirectory.Tests.csproj", "{49D6699E-E8F0-4030-A52C-BCE3E77358C7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDirectory", "AzureDirectory\AzureDirectory.csproj", "{AA29822E-8C31-4E7D-AA00-3F9DDD2CD5A7}"
 EndProject

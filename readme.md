@@ -81,7 +81,7 @@ indexWriter.Close();
 And searching is as easy as:
 
 ```cs
-var searcher = new IndexSearcher(azureDirectory);               
+var searcher = new IndexSearcher(azureDirectory);
 var parser = QueryParser("Title", new StandardAnalyzer());
 var query = parser.Parse("Title:(Dog AND Cat)");
 
@@ -91,7 +91,7 @@ for (int i = 0; i < hits.Length(); i++)
     var doc = hits.Doc(i);
     Console.WriteLine(doc.GetField("Title").StringValue());
 }
-```            
+```
 
 
 ## Caching and Compression
