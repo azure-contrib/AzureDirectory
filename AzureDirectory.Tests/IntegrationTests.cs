@@ -8,6 +8,7 @@ using Microsoft.Azure.Storage.Blob;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Text;
+using Lucene.Net.Analysis.Standard;
 
 namespace AzureDirectory.Tests
 {
@@ -35,7 +36,7 @@ namespace AzureDirectory.Tests
       var indexWriterConfig = new IndexWriterConfig(
           Lucene.Net.Util.LuceneVersion.LUCENE_48,
           new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48));
-
+      
       int dog = 0, cat = 0, car = 0;
 
       using (var indexWriter = new IndexWriter(azureDirectory, indexWriterConfig))
