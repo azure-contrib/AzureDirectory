@@ -125,7 +125,7 @@ namespace Lucene.Net.Store.Azure
     public void CreateContainer()
     {
       _blobContainer = _blobClient.GetContainerReference(_containerName);
-      _blobContainer.CreateIfNotExists();
+      _blobContainer.CreateIfNotExistsAsync().Wait();
     }
 
     /// <summary>Returns an array of strings, one for each file in the directory. </summary>
@@ -212,7 +212,7 @@ namespace Lucene.Net.Store.Azure
       //if we've made it this far then the cache directly file has been successfully removed so now we'll do the master
 
       var blob = _blobContainer.GetBlockBlobReference(_rootFolder + name);
-      blob.DeleteIfExists();
+      blob.DeleteIfExistsAsync().Wait();
     }
 
 
